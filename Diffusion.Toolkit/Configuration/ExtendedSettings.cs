@@ -21,7 +21,7 @@ public class ExtendedSettings : SettingsContainer
     {
         MuteSidePanelVideo = true;
         InfoOverlayOnRightEdge = false;
-        InfoOverlayEdgeWidth = 8;
+        InfoOverlayEdgeWidth = 24;
         VideoSectionState = AccordionState.Expanded;
         VideoMetadata = new VideoMetadataSettings();
     }

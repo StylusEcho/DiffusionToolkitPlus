@@ -1023,8 +1023,9 @@
                     <RowDefinition Height="50"/>
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="1" Background="#A0000000" Margin="10" Visibility="{Binding CurrentImage.IsSideParametersVisible, Converter={StaticResource boolToVis}}">
-                    <controls:MetadataPanel CurrentImage="{Binding CurrentImage}" MetadataSection="{Binding MetadataSection}">
+                <Grid Grid.Row="1" Background="{DynamicResource PrimaryBrush}" Margin="10" Visibility="{Binding CurrentImage.IsSideParametersVisible, Converter={StaticResource boolToVis}}">
+                    <controls:MetadataPanel CurrentImage="{Binding CurrentImage}" MetadataSection="{Binding MetadataSection}"
+                                            TextForeground="{DynamicResource ForegroundBrush}">
                     </controls:MetadataPanel>
                 </Grid>
             </Grid>
@@ -1038,7 +1039,8 @@
                           Height="5"
             />
 
-            <controls:MetadataPanel Grid.Row="2"   CurrentImage="{Binding CurrentImage}">
+            <controls:MetadataPanel Grid.Row="2" CurrentImage="{Binding CurrentImage}"
+                                    TextForeground="{DynamicResource ForegroundBrush}">
             </controls:MetadataPanel>
 
         </Grid>

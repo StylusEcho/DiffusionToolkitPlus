@@ -66,6 +66,23 @@ namespace Diffusion.Toolkit.Controls
         /// </summary>
         public ExtendedSettings ExtendedSettings => ServiceLocator.ExtendedSettings;
 
+        public static readonly DependencyProperty TextForegroundProperty = DependencyProperty.Register(
+            nameof(TextForeground),
+            typeof(Brush),
+            typeof(MetadataPanel),
+            new PropertyMetadata(Brushes.White)
+        );
+
+        /// <summary>
+        /// Colour of the metadata text. The overlays sit on a dark backdrop whatever the theme, so
+        /// they keep the default light text; the docked pane passes the theme's foreground brush.
+        /// </summary>
+        public Brush TextForeground
+        {
+            get => (Brush)GetValue(TextForegroundProperty);
+            set => SetValue(TextForegroundProperty, value);
+        }
+
         public MetadataPanel()
         {
             InitializeComponent();
