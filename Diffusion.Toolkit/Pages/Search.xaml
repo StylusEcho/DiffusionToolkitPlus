@@ -96,7 +96,8 @@
                     </Button>
 
 
-                    <Button Content="{lex:Loc Search.Folders.AddRoot}" Margin="10,0,0,0" Height="25" MinWidth="120" Click="AddRootFolder_OnClick">
+                    <!-- Same destination as the Home button in the folder tree's header -->
+                    <Button Content="{lex:Loc Search.Folders.ManageRoots}" Margin="10,0,0,0" Height="25" MinWidth="140" Click="ManageRootFolders_OnClick">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource BorderlessButton}">
                                 <Setter Property="Visibility" Value="Collapsed"></Setter>

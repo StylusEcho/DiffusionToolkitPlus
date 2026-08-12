@@ -151,6 +151,7 @@
   "Search.Diffusions": "Diffusions",
   "Search.Folders": "Folders",
   "Search.Folders.AddRoot": "Add Root Folder",
+  "Search.Folders.ManageRoots": "Manage Root Folders",
   "Search.Folders.ManageExcluded": "To manage excluded folders, use the Folder TreeView (View > Folders) and right-click on a folder to exclude / unexclude it.",
   "Search.Folders.Buttons.Home.ToolTip": "Manage Root Folders",
   "Search.Folders.Buttons.CreateRootFolder.ToolTip": "New Root Folder",
