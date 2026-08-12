@@ -242,6 +242,22 @@ public static class QueryCombiner
             bindings = bindings.Concat(new[] { (object)options.Folder! });
         }
 
+        // Folders selected in the sidebar narrow the results to those folders and their subfolders.
+        // substr rather than LIKE so a path containing % or _ can't widen the match.
+        if (options.FolderPaths is { Count: > 0 })
+        {
+            var conditions = string.Join(" OR ", options.FolderPaths.Select(_ => "(f.Path = ? OR substr(f.Path, 1, ?) = ?)"));
+
+            filters.Add($"SELECT m1.Id FROM Image m1 INNER JOIN Folder f ON f.Id = m1.FolderId WHERE {conditions}");
+
+            bindings = bindings.Concat(options.FolderPaths.SelectMany(path =>
+            {
+                var prefix = path.TrimEnd('\\') + "\\";
+
+                return new object[] { path, prefix.Length, prefix };
+            }));
+        }
+
         if (filters.Any())
         {
             query = $"SELECT Id FROM ({query}) INTERSECT " + string.Join(" INTERSECT ", filters);

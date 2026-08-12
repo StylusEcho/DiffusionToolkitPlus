@@ -761,6 +761,29 @@ namespace Diffusion.Toolkit.Pages
             _model.Results = text;
         }
 
+        /// <summary>
+        /// True when the sidebar folder tree filters the current results rather than navigating.
+        /// The folder view navigates into a folder instead, so it is excluded.
+        /// </summary>
+        private bool IsFolderFilterView => _currentModeSettings.Key != "folders";
+
+        /// <summary>
+        /// Paths of the folders selected in the sidebar, or null when nothing is selected and the
+        /// whole library should be shown.
+        /// </summary>
+        private IReadOnlyCollection<string>? GetSelectedFolderFilter()
+        {
+            if (!IsFolderFilterView) return null;
+
+            var paths = ServiceLocator.FolderService.SelectedFolders
+                .Where(d => d is { IsUnavailable: false, IsHome: false } && !string.IsNullOrEmpty(d.Path))
+                .Select(d => d.Path)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return paths.Count == 0 ? null : paths;
+        }
+
         public void SearchImages(QueryOptions? queryOptions, bool focus = false)
         {
             if (!ServiceLocator.FolderService.RootFolders.Any())
@@ -850,6 +873,7 @@ namespace Diffusion.Toolkit.Pages
                         TagIds = tags,
                         TagsMode = _model.TagsMode,
                         Folder = _model.FolderPath == RootFolders ? null : _model.FolderPath,
+                        FolderPaths = GetSelectedFolderFilter(),
                         SearchNodes = _model.SearchSettings.SearchNodes,
                         SearchAllProperties = _model.SearchSettings.SearchAllProperties,
                         SearchRawData = _model.SearchSettings.SearchRawData,
