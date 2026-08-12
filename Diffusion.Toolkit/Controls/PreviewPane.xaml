@@ -81,6 +81,17 @@
             <fa:ImageAwesome Opacity="0.5" Icon="CircleOutlineNotch" Height="60" Spin="True" SpinDuration="1" Foreground="{StaticResource ForegroundBrush}" />
         </Grid>
 
+        <!-- Quick album marker, top left, matching the thumbnail badge -->
+        <TextBlock Text="◆" FontSize="20" Margin="8,6,0,0"
+                   HorizontalAlignment="Left" VerticalAlignment="Top"
+                   IsHitTestVisible="False"
+                   Foreground="{DynamicResource AccentBrush}"
+                   Visibility="{Binding Image.IsInQuickAlbum, Converter={StaticResource boolToVisCol}}">
+            <TextBlock.Effect>
+                <DropShadowEffect BlurRadius="4" Opacity="0.8" ShadowDepth="2" Direction="-90"></DropShadowEffect>
+            </TextBlock.Effect>
+        </TextBlock>
+
 
         <Grid  Background="{x:Null}" Visibility="{Binding Image.IsMessageVisible, Converter={StaticResource boolToVis}}">
             <TextBlock TextAlignment="Center" FontSize="30" Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Text="{Binding Image.Message}">
@@ -206,9 +217,9 @@
                 </StackPanel>
             </Border>
         </Grid>-->
-        <Grid Background="{x:Null}" Visibility="{Binding MainModel.ShowTags, Converter={StaticResource boolToVis}}">
+        <Grid Background="{x:Null}" Visibility="{Binding IsRatingsBarVisible, Converter={StaticResource boolToVis}}"
+              VerticalAlignment="{Binding RatingsBarAlignment}" Height="50">
             <Grid.RowDefinitions>
-                <RowDefinition/>
                 <RowDefinition Height="50"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
@@ -216,9 +227,10 @@
                 <ColumnDefinition Width="32"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="32"/>
+                <ColumnDefinition Width="32"/>
                 <ColumnDefinition/>
             </Grid.ColumnDefinitions>
-            <Button Grid.Row="1" Grid.Column="1" Style="{StaticResource StaticButton}" HorizontalAlignment="Left" PreviewMouseDown="NavigatePrevious_OnPreviewMouseDown">
+            <Button Grid.Row="0" Grid.Column="1" Style="{StaticResource StaticButton}" HorizontalAlignment="Left" PreviewMouseDown="NavigatePrevious_OnPreviewMouseDown">
                 <fa:ImageAwesome Margin="0,4,0,0" Height="18" Icon="ArrowLeft" Foreground="{DynamicResource ForegroundBrush}">
                     <fa:ImageAwesome.Resources>
                         <Style TargetType="fa:ImageAwesome">
@@ -232,7 +244,7 @@
                     </fa:ImageAwesome.Resources>
                 </fa:ImageAwesome>
             </Button>
-            <local:StarRating Grid.Row="1" Grid.Column="2" x:Name="StarRating" Image="{Binding Image}">
+            <local:StarRating Grid.Row="0" Grid.Column="2" x:Name="StarRating" Image="{Binding Image}">
                 <local:StarRating.Style>
                     <Style TargetType="local:StarRating">
                         <Setter Property="RatingSize" Value="Standard"></Setter>
@@ -244,7 +256,7 @@
                     </Style>
                 </local:StarRating.Style>
             </local:StarRating>
-            <Button Grid.Row="1" Grid.Column="3" Style="{StaticResource StaticButton}" HorizontalAlignment="Right" PreviewMouseDown="NavigateNext_OnPreviewMouseDown">
+            <Button Grid.Row="0" Grid.Column="3" Style="{StaticResource StaticButton}" HorizontalAlignment="Right" PreviewMouseDown="NavigateNext_OnPreviewMouseDown">
                 <fa:ImageAwesome Margin="0,4,0,0" Height="18" Icon="ArrowRight" Foreground="{DynamicResource ForegroundBrush}">
                     <fa:ImageAwesome.Resources>
                         <Style TargetType="fa:ImageAwesome">
@@ -258,7 +270,28 @@
                     </fa:ImageAwesome.Resources>
                 </fa:ImageAwesome>
             </Button>
-          
+
+            <!-- Quick album, same action as the B shortcut -->
+            <Button Grid.Row="0" Grid.Column="4" Style="{StaticResource StaticButton}" HorizontalAlignment="Right"
+                    ToolTip="{lex:Loc Menu.View.ToggleQuickAlbum}"
+                    Command="{Binding MainModel.ToggleQuickAlbumCommand}">
+                <fa:ImageAwesome Margin="0,4,0,0" Height="18" Icon="Bookmark" Foreground="{DynamicResource AccentBrush}">
+                    <fa:ImageAwesome.Resources>
+                        <Style TargetType="fa:ImageAwesome">
+                            <Setter Property="Opacity" Value="0.5"></Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Opacity" Value="1.0"></Setter>
+                                </Trigger>
+                                <DataTrigger Binding="{Binding Image.IsInQuickAlbum}" Value="True">
+                                    <Setter Property="Opacity" Value="1.0"></Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </fa:ImageAwesome.Resources>
+                </fa:ImageAwesome>
+            </Button>
+
         </Grid>
         <!-- Loop and volume controls used to live here. Playback is driven from the full screen
              control bar now, and the docked pane plays muted, so they were only duplication. -->

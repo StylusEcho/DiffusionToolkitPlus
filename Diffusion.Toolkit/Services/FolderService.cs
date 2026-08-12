@@ -890,6 +890,14 @@ namespace Diffusion.Toolkit.Services
             }
         }
 
+        /// <summary>
+        /// Drops files from the library once they disappear from disk.
+        /// </summary>
+        /// <remarks>
+        /// ComfyUI removes intermediate render passes - a pre-interpolation video, for instance -
+        /// as soon as the next stage writes its output. Without this they linger in the library as
+        /// dead entries that have to be cleaned up by hand.
+        /// </remarks>
         private void WatcherOnDeleted(object sender, FileSystemEventArgs e)
         {
             if (Path.GetFileName(e.FullPath) == "dt_thumbnails.db-journal")
@@ -897,7 +905,33 @@ namespace Diffusion.Toolkit.Services
                 return;
             }
 
-            var x = e;
+            if (!ServiceLocator.ExtendedSettings.RemoveDeletedFilesFromLibrary) return;
+
+            if (!ServiceLocator.FileService.IsRegisteredExtension(e.FullPath)) return;
+
+            var path = e.FullPath;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // A move within the watched tree arrives as Renamed, and a brief network blip
+                    // can produce a spurious Deleted, so confirm the file really is gone.
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+
+                    if (File.Exists(path)) return;
+
+                    if (!ServiceLocator.DataStore.RemoveImageByPath(path)) return;
+
+                    Logger.Log($"Removed deleted file from the library: {path}");
+
+                    ServiceLocator.SearchService.RefreshResults();
+                }
+                catch (Exception exception)
+                {
+                    Logger.Log($"Failed to remove deleted file {path}: {exception.Message}");
+                }
+            });
         }
 
         private void WatcherOnChanged(object sender, FileSystemEventArgs e)

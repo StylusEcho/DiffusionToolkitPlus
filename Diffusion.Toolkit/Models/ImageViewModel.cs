@@ -299,6 +299,15 @@ public class ImageViewModel : BaseNotify
     }
 
     /// <summary>
+    /// True when this image is in the quick album. Drives the badge in the preview.
+    /// </summary>
+    public bool IsInQuickAlbum
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
     /// Technical details of the current video, read from the file on demand. Null for images and
     /// while a video's details are still being read. Never persisted to the database.
     /// </summary>

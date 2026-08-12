@@ -163,6 +163,32 @@ namespace Diffusion.Database
             return ($"(SELECT {string.Join(", ", propNamesList)} FROM {table}) {alias}", alias, props);
         }
 
+        /// <summary>
+        /// Removes the image at a path from the library, if it is in there.
+        /// </summary>
+        /// <returns>True when a row was actually removed.</returns>
+        public bool RemoveImageByPath(string path)
+        {
+            int id;
+
+            using (var db = OpenConnection())
+            {
+                var command = db.CreateCommand("SELECT Id FROM Image WHERE Path = ? LIMIT 1", path);
+
+                var ids = command.ExecuteQueryScalars<int>().ToList();
+
+                db.Close();
+
+                if (ids.Count == 0) return false;
+
+                id = ids[0];
+            }
+
+            RemoveImages(new[] { id });
+
+            return true;
+        }
+
         public void RemoveImages(IEnumerable<int> ids)
         {
             if (!ids.Any())

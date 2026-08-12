@@ -1,4 +1,4 @@
-﻿using Diffusion.Common;
+using Diffusion.Common;
 using Diffusion.Database;
 using Diffusion.Toolkit.Behaviors;
 using Diffusion.Toolkit.Classes;
@@ -481,6 +481,10 @@ namespace Diffusion.Toolkit.Controls
                     ActualSize();
                 }
             }
+            if (e.PropertyName == nameof(MainModel.ShowTags))
+            {
+                OnPropertyChanged(nameof(IsRatingsBarVisible));
+            }
         }
 
         private void Grid_OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -573,8 +577,7 @@ namespace Diffusion.Toolkit.Controls
             isPlaying = true;
             Player?.Play();
 
-            OnPropertyChanged(nameof(HasPlayer));
-            OnPropertyChanged(nameof(IsPlaying));
+            NotifyPlaybackStateChanged();
         }
 
         private void Player_OnMediaEnded(object sender, RoutedEventArgs e)
@@ -588,7 +591,7 @@ namespace Diffusion.Toolkit.Controls
                 isPlaying = true;
             }
 
-            OnPropertyChanged(nameof(IsPlaying));
+            NotifyPlaybackStateChanged();
         }
 
         private void ScrollViewer_OnLoaded(object sender, RoutedEventArgs e)
@@ -596,8 +599,7 @@ namespace Diffusion.Toolkit.Controls
             Player = null;
 
             // A still image replaced the video, so anything driving playback controls should stop
-            OnPropertyChanged(nameof(HasPlayer));
-            OnPropertyChanged(nameof(IsPlaying));
+            NotifyPlaybackStateChanged();
 
             ScrollViewer = (ScrollViewer)sender;
             Preview = FindVisualChildren<System.Windows.Controls.Image>(ScrollViewer).First();
@@ -628,6 +630,10 @@ namespace Diffusion.Toolkit.Controls
 
         private void Player_OnMouseDown(object sender, MouseButtonEventArgs e)
         {
+            // In the popped out viewer a click has to stay free for the double click that leaves
+            // full screen, and playback is driven from the control bar and the space bar instead.
+            if (IsPopout) return;
+
             TogglePlayPause();
             e.Handled = true;
         }
@@ -637,7 +643,7 @@ namespace Diffusion.Toolkit.Controls
             isPlaying = false;
             Player?.Pause();
 
-            OnPropertyChanged(nameof(IsPlaying));
+            NotifyPlaybackStateChanged();
         }
 
         /// <summary>
@@ -651,6 +657,46 @@ namespace Diffusion.Toolkit.Controls
         public bool HasPlayer => Player != null;
 
         public bool IsPlaying => isPlaying;
+
+        /// <summary>
+        /// Pushes the ratings bar to the top of the pane. The popped out viewer sets this so the
+        /// bar doesn't sit on top of the video control bar.
+        /// </summary>
+        public static readonly DependencyProperty RatingsBarAlignmentProperty = DependencyProperty.Register(
+            nameof(RatingsBarAlignment),
+            typeof(VerticalAlignment),
+            typeof(PreviewPane),
+            new PropertyMetadata(VerticalAlignment.Bottom)
+        );
+
+        public VerticalAlignment RatingsBarAlignment
+        {
+            get => (VerticalAlignment)GetValue(RatingsBarAlignmentProperty);
+            set => SetValue(RatingsBarAlignmentProperty, value);
+        }
+
+        /// <summary>
+        /// The ratings bar follows the "show tags" toggle, and optionally gets out of the way while
+        /// a video is actually playing so it doesn't sit over the picture.
+        /// </summary>
+        public bool IsRatingsBarVisible
+        {
+            get
+            {
+                if (MainModel is not { ShowTags: true }) return false;
+
+                if (!ServiceLocator.ExtendedSettings.HideRatingsBarWhileVideoPlays) return true;
+
+                return !(HasPlayer && isPlaying);
+            }
+        }
+
+        private void NotifyPlaybackStateChanged()
+        {
+            OnPropertyChanged(nameof(HasPlayer));
+            OnPropertyChanged(nameof(IsPlaying));
+            OnPropertyChanged(nameof(IsRatingsBarVisible));
+        }
 
         public TimeSpan Position
         {
@@ -717,7 +763,7 @@ namespace Diffusion.Toolkit.Controls
 
             isPlaying = !isPlaying;
 
-            OnPropertyChanged(nameof(IsPlaying));
+            NotifyPlaybackStateChanged();
         }
 
         private void ApplyMuteState()
@@ -749,12 +795,12 @@ namespace Diffusion.Toolkit.Controls
                             isPlaying = false;
                             Player?.Stop();
 
-                            OnPropertyChanged(nameof(IsPlaying));
+                            NotifyPlaybackStateChanged();
                         });
                     });
                 }
 
-                OnPropertyChanged(nameof(IsPlaying));
+                NotifyPlaybackStateChanged();
                 OnPropertyChanged(nameof(IsMuted));
 
                 MediaOpened?.Invoke(this, EventArgs.Empty);

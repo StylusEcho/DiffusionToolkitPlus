@@ -137,6 +137,15 @@ public class ImageEntry : BaseNotify
         set => SetField(ref field, value);
     }
 
+    /// <summary>
+    /// Drives the accent badge in the corner of the thumbnail.
+    /// </summary>
+    public bool IsInQuickAlbum
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
     public IEnumerable<string> Albums
     {
         get;

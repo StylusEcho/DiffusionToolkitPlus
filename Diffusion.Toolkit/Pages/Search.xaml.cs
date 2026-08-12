@@ -1101,6 +1101,7 @@ namespace Diffusion.Toolkit.Pages
                     imageViewModel.Rating = image.Rating;
                     imageViewModel.NSFW = image.NSFW;
                     imageViewModel.ForDeletion = image.ForDeletion;
+                    imageViewModel.IsInQuickAlbum = ServiceLocator.AlbumService.IsInQuickAlbum(image.Id);
                     imageViewModel.Albums = ServiceLocator.DataStore.GetImageAlbums(image.Id);
                     var albumLookup = imageViewModel.Albums.ToDictionary(x => x.Id);
 
@@ -1402,6 +1403,9 @@ namespace Diffusion.Toolkit.Pages
             var count = 0;
             var images = new List<ImageEntry>();
 
+            // One read per page rather than a query per thumbnail
+            ServiceLocator.AlbumService.RefreshQuickAlbum();
+
             foreach (var file in matches)
             {
                 var imageEntry = new ImageEntry(rId)
@@ -1421,6 +1425,7 @@ namespace Diffusion.Toolkit.Pages
                     Dispatcher = Dispatcher,
                     HasError = file.HasError,
                     Type = file.Type,
+                    IsInQuickAlbum = ServiceLocator.AlbumService.IsInQuickAlbum(file.Id),
                 };
 
                 images.Add(imageEntry);

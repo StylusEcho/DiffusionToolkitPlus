@@ -141,6 +141,7 @@ namespace Diffusion.Toolkit
         private Action _debounceCloseInfoOverlay;
         private readonly DispatcherTimer _positionTimer;
         private bool _isScrubbing;
+        private bool _isTimerUpdate;
 
         /// <summary>
         /// Limits the video control bar to 75% of the width of the monitor the window is on.
@@ -153,7 +154,7 @@ namespace Diffusion.Toolkit
 
             var screen = Screen.FromHandle(handle);
 
-            _model.ControlBarMaxWidth = screen.Bounds.Width * 0.75;
+            _model.ControlBarMaxWidth = screen.Bounds.Width * 0.60;
         }
 
         private void PreviewPaneOnMediaOpened(object? sender, EventArgs e)
@@ -191,7 +192,11 @@ namespace Diffusion.Toolkit
                 _model.DurationSeconds = duration;
             }
 
+            // Flagged so the slider's ValueChanged can tell our own update from a user seek
+            _isTimerUpdate = true;
             _model.PositionSeconds = PreviewPane.Position.TotalSeconds;
+            _isTimerUpdate = false;
+
             _model.NotifyTimeChanged();
         }
 
@@ -236,6 +241,23 @@ namespace Diffusion.Toolkit
             _isScrubbing = false;
 
             PreviewPane.Position = TimeSpan.FromSeconds(_model.PositionSeconds);
+        }
+
+        /// <summary>
+        /// Seeks on any change the timer didn't make. Clicking the track moves the thumb without
+        /// necessarily raising the drag events, so relying on those alone loses track clicks.
+        /// </summary>
+        private void Seek_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isTimerUpdate) return;
+            if (!PreviewPane.HasPlayer) return;
+
+            // Belt and braces: ignore anything that just echoes where the player already is
+            if (Math.Abs(e.NewValue - PreviewPane.Position.TotalSeconds) < 0.75) return;
+
+            PreviewPane.Position = TimeSpan.FromSeconds(e.NewValue);
+
+            _model.NotifyTimeChanged();
         }
 
         private void BottomBar_OnMouseEnter(object sender, MouseEventArgs e)
@@ -284,10 +306,6 @@ namespace Diffusion.Toolkit
 
         private void InfoOverlay_OnMouseLeave(object sender, MouseEventArgs e)
         {
-            // Auto-hide only pairs with the edge gesture. Without it the overlay stays put until
-            // "I" is pressed again, which is the behaviour people expect from a toggle.
-            if (!ServiceLocator.ExtendedSettings.InfoOverlayOnRightEdge) return;
-
             _debounceCloseInfoOverlay();
         }
 
@@ -428,6 +446,14 @@ namespace Diffusion.Toolkit
 
         private void PreviewPane_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
+            // Full screen steps back to a window first; a second double click then closes it
+            if (_isFullScreen)
+            {
+                ToggleFullScreen();
+                e.Handled = true;
+                return;
+            }
+
             Close();
         }
 
