@@ -4,6 +4,8 @@ using Diffusion.Database.Models;
 using Diffusion.Toolkit.Behaviors;
 using Diffusion.Toolkit.Classes;
 using Diffusion.Toolkit.Configuration;
+using Diffusion.Toolkit.Services;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -32,7 +34,11 @@ namespace Diffusion.Toolkit
 
             _model.SortAlbumsBy = _settings.SortAlbumsBy ?? "Date";
             _model.Escape = new RelayCommand<object>(o => Escape());
-            _model.Albums = new ObservableCollection<Album>(dataStore.GetAlbums());
+            // The quick album is pinned to the top of the sidebar, so it takes no part in sorting
+            var quickAlbumName = ServiceLocator.ExtendedSettings.QuickAlbumName;
+
+            _model.Albums = new ObservableCollection<Album>(dataStore.GetAlbums()
+                .Where(a => !string.Equals(a.Name, quickAlbumName, StringComparison.OrdinalIgnoreCase)));
             _model.MoveUpCommand = new RelayCommand<object>(o => MoveUp());
             _model.MoveDownCommand = new RelayCommand<object>(o => MoveDown());
             _model.PropertyChanged += ModelOnPropertyChanged;

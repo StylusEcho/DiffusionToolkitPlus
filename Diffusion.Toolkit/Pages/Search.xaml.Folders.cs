@@ -581,6 +581,16 @@ namespace Diffusion.Toolkit.Pages
 
         }
 
+        /// <summary>
+        /// Opens the root folder listing, where root folders are added, renamed and removed.
+        /// </summary>
+        private void ManageRootFolders_OnClick(object sender, RoutedEventArgs e)
+        {
+            SetView("folders");
+
+            OpenFolder(FolderViewModel.Home);
+        }
+
         private void AddRootFolder_OnClick(object sender, RoutedEventArgs e)
         {
             var window = ServiceLocator.WindowService.CurrentWindow;

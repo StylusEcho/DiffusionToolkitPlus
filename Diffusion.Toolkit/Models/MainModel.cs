@@ -124,6 +124,15 @@ public class MainModel : BaseNotify
     }
 
     /// <summary>
+    /// Mirrors the sidecar auto-hide setting so the pane's toggle button can show its state.
+    /// </summary>
+    public bool IsNavigationAutoHideEnabled
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
     /// True while the library is being read at startup. The search page shows a progress overlay
     /// and holds off searching until this clears.
     /// </summary>

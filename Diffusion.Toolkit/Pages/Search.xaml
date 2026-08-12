@@ -1,4 +1,4 @@
-﻿<local:NavigationPage x:Class="Diffusion.Toolkit.Pages.Search"
+<local:NavigationPage x:Class="Diffusion.Toolkit.Pages.Search"
                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -48,6 +48,7 @@
             <converters:FolderUnavailableConverter x:Key="FolderUnavailableConverter"></converters:FolderUnavailableConverter>
             <converters:InvBoolToOpacityConverter x:Key="InvBoolToOpacityConverter"></converters:InvBoolToOpacityConverter>
             <converters:MultiBoolToVisibilityCollapsedConverter x:Key="MultiBoolToVisibilityCollapsedConverter"></converters:MultiBoolToVisibilityCollapsedConverter>
+            <converters:AnyBoolToVisibilityCollapsedConverter x:Key="anyBoolToVisCol"></converters:AnyBoolToVisibilityCollapsedConverter>
             <converters:InvertBoolConverter x:Key="InvertBoolConverter"></converters:InvertBoolConverter>
             <converters:UnderlineConverter x:Key="UnderlineConverter"></converters:UnderlineConverter>
         </ResourceDictionary>
@@ -239,9 +240,38 @@
                             </Grid.ColumnDefinitions>
 
 
-                            <ScrollViewer Focusable="True" x:Name="NavigationScrollViewer" Grid.Column="0" VerticalScrollBarVisibility="Auto"
-                                          MouseEnter="NavigationPane_OnMouseEnter"
-                                          MouseLeave="NavigationPane_OnMouseLeave">
+                            <DockPanel x:Name="NavigationPanel" Grid.Column="0"
+                                       Background="{DynamicResource PrimaryBrush}"
+                                       MouseEnter="NavigationPane_OnMouseEnter"
+                                       MouseLeave="NavigationPane_OnMouseLeave">
+
+                                <!-- Auto-hide toggle, bottom left, opposite the section icons -->
+                                <Grid DockPanel.Dock="Bottom" Height="26" Background="{x:Null}">
+                                    <Button HorizontalAlignment="Left" Width="26"
+                                            Style="{StaticResource BorderlessButton}"
+                                            ToolTip="{lex:Loc Search.Navigation.Buttons.AutoHide.ToolTip}"
+                                            Click="ToggleNavigationAutoHide_OnClick">
+                                        <fa:FontAwesome Icon="EyeSlash">
+                                            <fa:FontAwesome.Style>
+                                                <Style TargetType="fa:FontAwesome">
+                                                    <Setter Property="Opacity" Value="1.0"></Setter>
+                                                    <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"></Setter>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding MainModel.IsNavigationAutoHideEnabled}" Value="True">
+                                                            <Setter Property="Opacity" Value="1.0"></Setter>
+                                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"></Setter>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding MainModel.IsNavigationAutoHideEnabled}" Value="False">
+                                                            <Setter Property="Opacity" Value="0.4"></Setter>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </fa:FontAwesome.Style>
+                                        </fa:FontAwesome>
+                                    </Button>
+                                </Grid>
+
+                                <ScrollViewer Focusable="True" x:Name="NavigationScrollViewer" VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
                                     <!--<controls:AccordionControl HeaderBackground="#80000000" Margin="0,0,0,5"
                                                                Visibility="{Binding DataContext.MainModel.Settings.NavigationSection.ShowDate, Converter={StaticResource boolToVisCol}, ElementName=NavigationThumbnailGrid}"
@@ -308,8 +338,10 @@
                                                 <Button Grid.Column="1" Style="{StaticResource BorderlessButton}" ToolTip="{lex:Loc Search.Folders.Buttons.Home.ToolTip}" Command="{Binding GoHome}">
                                                     <fa:FontAwesome Icon="Home"></fa:FontAwesome>
                                                 </Button>
-                                                <Button Grid.Column="2" Style="{StaticResource BorderlessButton}" ToolTip="{lex:Loc Search.Folders.Buttons.CreateRootFolder.ToolTip}" Click="AddRootFolder_OnClick">
-                                                    <fa:FontAwesome Icon="Plus"></fa:FontAwesome>
+                                                <!-- Root folders are added from the Manage Root Folders view, which is
+                                                     where they are configured, renamed and removed -->
+                                                <Button Grid.Column="2" Style="{StaticResource BorderlessButton}" ToolTip="{lex:Loc Search.Folders.Buttons.ManageRootFolders.ToolTip}" Click="ManageRootFolders_OnClick">
+                                                    <fa:FontAwesome Icon="Gear"></fa:FontAwesome>
                                                 </Button>
                                                 <Button Grid.Column="3" Style="{StaticResource BorderlessButton}" 
                                                         ToolTip="{lex:Loc Search.Folders.Buttons.Refresh.ToolTip}" 
@@ -792,9 +824,19 @@
                                                     <ColumnDefinition />
                                                     <ColumnDefinition Width="26"/>
                                                 </Grid.ColumnDefinitions>
-                                                <!--<Button Grid.Column="1" Style="{StaticResource BorderlessButton}" ToolTip="{lex:Loc Search.Albums.Buttons.SortQueries.ToolTip}" Command="{Binding MainModel.SortAlbumCommand}">
-                                                    <fa:FontAwesome Icon="Sort"></fa:FontAwesome>
-                                                </Button>-->
+                                                <!-- Saves the active search or filter, same as Search > Save Query/Filter.
+                                                     Only offered when there is something to save. -->
+                                                <Button Grid.Column="1" Style="{StaticResource BorderlessButton}"
+                                                        ToolTip="{lex:Loc Search.Queries.Buttons.SaveQuery.ToolTip}"
+                                                        Command="{Binding MainModel.SaveQuery}">
+                                                    <Button.Visibility>
+                                                        <MultiBinding Converter="{StaticResource anyBoolToVisCol}">
+                                                            <Binding Path="MainModel.HasQuery"></Binding>
+                                                            <Binding Path="MainModel.HasFilter"></Binding>
+                                                        </MultiBinding>
+                                                    </Button.Visibility>
+                                                    <fa:FontAwesome Icon="Plus"></fa:FontAwesome>
+                                                </Button>
                                             </Grid>
                                         </controls:AccordionControl.ButtonAreaContent>
 
@@ -851,7 +893,8 @@
 
                                 </StackPanel>
 
-                            </ScrollViewer>
+                                </ScrollViewer>
+                            </DockPanel>
 
 
                             <GridSplitter x:Name="GridSplitter2"  

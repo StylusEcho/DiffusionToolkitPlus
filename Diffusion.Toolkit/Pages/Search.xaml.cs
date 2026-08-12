@@ -1,4 +1,4 @@
-﻿using Diffusion.Civitai.Models;
+using Diffusion.Civitai.Models;
 using Diffusion.Common;
 using Diffusion.Common.Query;
 using Diffusion.Database;
@@ -565,6 +565,10 @@ namespace Diffusion.Toolkit.Pages
             this.Loaded += (sender, args) =>
             {
                 SetAccordionResizeableState();
+
+                _model.MainModel.IsNavigationAutoHideEnabled = AutoHideEnabled;
+
+                ApplyNavigationLayout();
             };
 
             SetNavigationVisible(_model.MainModel.Settings.NavigationSection.ShowSection);
@@ -955,7 +959,11 @@ namespace Diffusion.Toolkit.Pages
                         UpdateResults();
 
 
-                        if (_currentModeSettings.ViewMode == ViewMode.Folder)
+                        // SearchView.Folder is what makes LoadImageEntries list the folders, and it
+                        // is driven by the mode key rather than ViewMode. Bailing out here when the
+                        // two disagree left Manage Root Folders blank, because a root listing
+                        // legitimately has no images of its own.
+                        if (_currentModeSettings.ViewMode == ViewMode.Folder || QueryOptions.SearchView == SearchView.Folder)
                         {
                             if (_model.Pages == 0)
                             {
@@ -1954,65 +1962,126 @@ namespace Diffusion.Toolkit.Pages
         private bool _navigationAutoCollapsed;
 
         /// <summary>
-        /// Width of the strip at the left edge that brings an auto-collapsed navigation pane back.
+        /// Width of the strip at the left edge that brings an auto-hidden navigation pane back.
         /// </summary>
         private const int NavigationRevealZone = 12;
 
-        private static bool AutoCollapseEnabled => ServiceLocator.ExtendedSettings.AutoCollapseNavigationPane;
+        private static bool AutoHideEnabled => ServiceLocator.ExtendedSettings.AutoCollapseNavigationPane;
+
+        /// <summary>
+        /// Turns auto-hide on or off from the button at the foot of the pane. Switching it off
+        /// always leaves the pane showing, so it can never be left hidden with no way back.
+        /// </summary>
+        public void SetNavigationAutoHide(bool enabled)
+        {
+            ServiceLocator.ExtendedSettings.AutoCollapseNavigationPane = enabled;
+            _model.MainModel.IsNavigationAutoHideEnabled = enabled;
+
+            if (!enabled)
+            {
+                _navigationAutoCollapsed = false;
+                SetNavigationVisible(_model.MainModel.Settings is { NavigationSection.ShowSection: true });
+            }
+
+            ApplyNavigationLayout();
+        }
+
+        private void ToggleNavigationAutoHide_OnClick(object sender, RoutedEventArgs e)
+        {
+            SetNavigationAutoHide(!AutoHideEnabled);
+        }
+
+        /// <summary>
+        /// An auto-hiding pane floats over the thumbnails rather than squeezing them, so the grid
+        /// doesn't reflow every time it appears and disappears.
+        /// </summary>
+        private void ApplyNavigationLayout()
+        {
+            if (AutoHideEnabled)
+            {
+                var width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth);
+
+                NavigationPanel.Width = width.IsAbsolute && width.Value > 0 ? width.Value : 250;
+                NavigationPanel.HorizontalAlignment = HorizontalAlignment.Left;
+                Panel.SetZIndex(NavigationPanel, 10);
+                Grid.SetColumnSpan(NavigationPanel, 3);
+
+                // The thumbnails take the whole width and the pane sits on top of them
+                NavigationThumbnailGrid.ColumnDefinitions[0].Width = new GridLength(0);
+                NavigationThumbnailGrid.ColumnDefinitions[2].Width = new GridLength(1, GridUnitType.Star);
+
+                GridSplitter2.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                NavigationPanel.Width = double.NaN;
+                NavigationPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+                Panel.SetZIndex(NavigationPanel, 0);
+                Grid.SetColumnSpan(NavigationPanel, 1);
+
+                GridSplitter2.Visibility = Visibility.Visible;
+
+                NavigationThumbnailGrid.ColumnDefinitions[0].Width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth);
+                NavigationThumbnailGrid.ColumnDefinitions[2].Width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth2);
+            }
+        }
 
         private void NavigationPane_OnMouseEnter(object sender, MouseEventArgs e)
         {
-            // Cancel a pending collapse by replacing the pending callback's effect
+            // Cancel a pending hide by replacing the pending callback's effect
             _navigationAutoCollapsed = false;
         }
 
         private void NavigationPane_OnMouseLeave(object sender, MouseEventArgs e)
         {
-            if (!AutoCollapseEnabled) return;
+            if (!AutoHideEnabled) return;
 
             // Only ever hide a pane the user actually has switched on
             if (_model.MainModel.Settings is not { NavigationSection.ShowSection: true }) return;
 
-            _debounceCollapseNavigation ??= Utility.Debounce(() => Dispatcher.Invoke(CollapseNavigationForHover), 600);
+            _debounceCollapseNavigation ??= Utility.Debounce(() => Dispatcher.Invoke(CollapseNavigationForHover), 300);
 
             _debounceCollapseNavigation();
         }
 
         private void CollapseNavigationForHover()
         {
-            if (!AutoCollapseEnabled) return;
-            if (NavigationScrollViewer.IsMouseOver) return;
+            if (!AutoHideEnabled) return;
+            if (NavigationPanel.IsMouseOver) return;
             if (_model.MainModel.Settings is not { NavigationSection.ShowSection: true }) return;
 
             _navigationAutoCollapsed = true;
 
-            SetNavigationVisible(false);
+            NavigationPanel.Visibility = Visibility.Collapsed;
         }
 
         /// <summary>
-        /// Brings an auto-collapsed navigation pane back when the pointer returns to the left edge.
-        /// The pane has no width when collapsed, so there is nothing else left to hover.
+        /// Brings an auto-hidden navigation pane back when the pointer returns to the left edge.
+        /// The pane is not on screen when hidden, so there is nothing else left to hover.
         /// </summary>
         private void MainGrid_OnMouseMove(object sender, MouseEventArgs e)
         {
             if (!_navigationAutoCollapsed) return;
-            if (!AutoCollapseEnabled) return;
+            if (!AutoHideEnabled) return;
 
             if (e.GetPosition(MainGrid).X > NavigationRevealZone) return;
 
             _navigationAutoCollapsed = false;
 
-            SetNavigationVisible(true);
+            NavigationPanel.Visibility = Visibility.Visible;
         }
 
         public void SetNavigationVisible(bool visible)
         {
-            var old = NavigationScrollViewer.Visibility;
+            var old = NavigationPanel.Visibility;
 
-            NavigationScrollViewer.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-            GridSplitter2.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+            NavigationPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+            GridSplitter2.Visibility = visible && !AutoHideEnabled ? Visibility.Visible : Visibility.Collapsed;
 
-            if (NavigationScrollViewer.Visibility == old) return;
+            if (NavigationPanel.Visibility == old) return;
+
+            // An overlaying pane leaves the thumbnail columns alone
+            if (AutoHideEnabled) return;
 
             if (visible)
             {

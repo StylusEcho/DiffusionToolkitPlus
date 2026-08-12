@@ -802,11 +802,11 @@ namespace Diffusion.Toolkit
 
             _model.GotoUrl = new RelayCommand<string>((url) =>
             {
-                // Clicking the category you are already looking at collapses the navigation pane,
-                // the way a second click on a sidebar tab does elsewhere.
+                // Clicking the category you are already looking at pins the navigation pane open,
+                // which is the way out if auto-hide is making it hard to reach.
                 if (string.Equals(url, _currentNavigationUrl, StringComparison.OrdinalIgnoreCase))
                 {
-                    ToggleNavigationPane();
+                    _search?.SetNavigationAutoHide(false);
                     return;
                 }
 
