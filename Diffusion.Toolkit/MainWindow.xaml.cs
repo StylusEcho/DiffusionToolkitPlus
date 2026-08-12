@@ -64,6 +64,13 @@ namespace Diffusion.Toolkit
 
 
         private Search _search;
+
+        /// <summary>
+        /// The url currently displayed, so the category buttons can tell a navigation from a
+        /// second click on the category already open.
+        /// </summary>
+        private string? _currentNavigationUrl;
+
         private Pages.Settings _settingsPage;
         private Pages.Models _models;
         private bool _tipsOpen;
@@ -795,11 +802,21 @@ namespace Diffusion.Toolkit
 
             _model.GotoUrl = new RelayCommand<string>((url) =>
             {
+                // Clicking the category you are already looking at collapses the navigation pane,
+                // the way a second click on a sidebar tab does elsewhere.
+                if (string.Equals(url, _currentNavigationUrl, StringComparison.OrdinalIgnoreCase))
+                {
+                    ToggleNavigationPane();
+                    return;
+                }
+
                 _navigatorService.Goto(url);
             });
 
             _navigatorService.OnNavigate += (o, args) =>
             {
+                _currentNavigationUrl = args.TargetUri.Url;
+
                 _model.ActiveView = args.TargetUri.Path.ToLower() switch
                 {
                     "search" when args.TargetUri.Fragment != null => args.TargetUri.Fragment.ToLower() switch

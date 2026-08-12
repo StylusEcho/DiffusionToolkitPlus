@@ -171,6 +171,29 @@ namespace Diffusion.Toolkit.Controls
                 });
             }
         }
+
+        /// <summary>
+        /// Renames the label shown for a root folder from the Manage Root Folders view. Cosmetic
+        /// only - the folder on disk and the Folder row are untouched.
+        /// </summary>
+        private async void RenameRootFolder_OnClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not FrameworkElement { DataContext: ImageEntry { EntryType: EntryType.RootFolder } rootFolder }) return;
+
+            e.Handled = true;
+
+            var folder = new FolderViewModel()
+            {
+                Id = rootFolder.Id,
+                Path = rootFolder.Path,
+                Name = rootFolder.Name
+            };
+
+            if (await ServiceLocator.FolderService.ShowRenameRootFolderDisplayDialog(folder))
+            {
+                rootFolder.Name = ServiceLocator.FolderService.GetRootFolderName(rootFolder.Path);
+            }
+        }
     }
 
 }

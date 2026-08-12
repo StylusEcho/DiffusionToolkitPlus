@@ -412,5 +412,7 @@
   "Settings.General.QuickAlbumName": "Quick Album name",
   "Settings.General.RemoveDeletedFiles": "Remove files from the library when they are deleted from disk",
   "Settings.General.RemoveDeletedFiles.ToolTip": "ComfyUI deletes intermediate render passes once the next stage writes its output. With this on they are dropped from the library instead of lingering as dead entries.",
-  "Settings.Video.HideRatingsBarWhilePlaying": "Hide the ratings bar while a video is playing (full screen)"
+  "Settings.Video.HideRatingsBarWhilePlaying": "Hide the ratings bar while a video is playing (full screen)",
+  "Settings.General.AutoCollapseNavigation": "Collapse the navigation pane when the pointer moves away",
+  "Settings.General.AutoCollapseNavigation.ToolTip": "Move the pointer back to the left edge of the window to bring it back. Clicking the category you are already viewing also collapses it."
 }

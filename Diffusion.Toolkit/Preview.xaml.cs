@@ -446,14 +446,6 @@ namespace Diffusion.Toolkit
 
         private void PreviewPane_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            // Full screen steps back to a window first; a second double click then closes it
-            if (_isFullScreen)
-            {
-                ToggleFullScreen();
-                e.Handled = true;
-                return;
-            }
-
             Close();
         }
 

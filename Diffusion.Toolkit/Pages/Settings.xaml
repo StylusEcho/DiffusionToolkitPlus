@@ -179,6 +179,13 @@
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <CheckBox IsChecked="{Binding ExtendedSettings.AutoCollapseNavigationPane, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
+                                          ToolTip="{lex:Loc Settings.General.AutoCollapseNavigation.ToolTip}"
+                                          Content="{lex:Loc Settings.General.AutoCollapseNavigation}"></CheckBox>
+                                <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                 <CheckBox IsChecked="{Binding ExtendedSettings.RemoveDeletedFilesFromLibrary, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
                                           ToolTip="{lex:Loc Settings.General.RemoveDeletedFiles.ToolTip}"
                                           Content="{lex:Loc Settings.General.RemoveDeletedFiles}"></CheckBox>

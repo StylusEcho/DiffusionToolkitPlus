@@ -52,7 +52,8 @@
             <converters:UnderlineConverter x:Key="UnderlineConverter"></converters:UnderlineConverter>
         </ResourceDictionary>
     </local:NavigationPage.Resources>
-    <Grid x:Name="MainGrid" Background="{DynamicResource {x:Static SystemColors.ControlBrush}}">
+    <Grid x:Name="MainGrid" Background="{DynamicResource {x:Static SystemColors.ControlBrush}}"
+          MouseMove="MainGrid_OnMouseMove">
 
         <Grid.ColumnDefinitions>
             <ColumnDefinition />
@@ -238,7 +239,9 @@
                             </Grid.ColumnDefinitions>
 
 
-                            <ScrollViewer Focusable="True" x:Name="NavigationScrollViewer" Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                            <ScrollViewer Focusable="True" x:Name="NavigationScrollViewer" Grid.Column="0" VerticalScrollBarVisibility="Auto"
+                                          MouseEnter="NavigationPane_OnMouseEnter"
+                                          MouseLeave="NavigationPane_OnMouseLeave">
                                 <StackPanel>
                                     <!--<controls:AccordionControl HeaderBackground="#80000000" Margin="0,0,0,5"
                                                                Visibility="{Binding DataContext.MainModel.Settings.NavigationSection.ShowDate, Converter={StaticResource boolToVisCol}, ElementName=NavigationThumbnailGrid}"
@@ -625,7 +628,9 @@
                                             </Grid>
                                         </controls:AccordionControl.ButtonAreaContent>
 
-                                        <ItemsControl ItemsSource="{Binding Path=MainModel.Albums}" PreviewMouseWheel="UIElement_OnPreviewMouseWheel">
+                                        <ItemsControl ItemsSource="{Binding Path=MainModel.Albums}" PreviewMouseWheel="UIElement_OnPreviewMouseWheel"
+                                                      behaviors:DTBehaviors.IsDragSortable="True"
+                                                      behaviors:DTBehaviors.OnDragSortDrop="Albums_OnDragSortDrop">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <Grid Background="Transparent" HorizontalAlignment="Stretch" Margin="2,0,2,0">
