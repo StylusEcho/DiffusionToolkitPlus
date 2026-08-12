@@ -151,6 +151,7 @@
   "Search.Diffusions": "Diffusions",
   "Search.Folders": "Folders",
   "Search.Folders.AddRoot": "Add Root Folder",
+  "Search.Folders.ManageRoots": "Manage Root Folders",
   "Search.Folders.ManageExcluded": "To manage excluded folders, use the Folder TreeView (View > Folders) and right-click on a folder to exclude / unexclude it.",
   "Search.Folders.Buttons.Home.ToolTip": "Manage Root Folders",
   "Search.Folders.Buttons.CreateRootFolder.ToolTip": "New Root Folder",
@@ -460,7 +461,7 @@
   "Settings.General.RemoveDeletedFiles": "Remove files from the library when they are deleted from disk",
   "Settings.General.RemoveDeletedFiles.ToolTip": "ComfyUI deletes intermediate render passes once the next stage writes its output. With this on they are dropped from the library instead of lingering as dead entries.",
   "Settings.Video.HideRatingsBarWhilePlaying": "Hide the ratings bar while a video is playing (full screen)",
-  "Search.Navigation.Buttons.AutoHide.ToolTip": "Auto-hide the navigation pane. When on, the pane floats over the thumbnails and hides when the pointer moves away - move it back to the left edge to bring it back. Clicking the icon of the view you are already in pins it open again.",
+  "Search.Navigation.Buttons.AutoHide.ToolTip": "Auto-hide the navigation pane. When on, the pane floats over the thumbnails and hides when the pointer moves away - move it back over this bar or the left edge to bring it back. Clicking the icon of the view you are already in pins it open again.",
   "Search.Folders.Buttons.ManageRootFolders.ToolTip": "Manage Root Folders",
   "Search.Queries.Buttons.SaveQuery.ToolTip": "Save the current search / filter"
 }

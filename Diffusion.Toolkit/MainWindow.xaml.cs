@@ -462,6 +462,16 @@ namespace Diffusion.Toolkit
             _search.SetPreviewVisible(_model.IsPreviewVisible);
         }
 
+        /// <summary>
+        /// The view bar sits to the left of the search page, so the pointer reaches it before it can
+        /// reach the page's own reveal strip. Treating the whole bar as a reveal zone means an
+        /// auto-hidden pane comes back wherever the pointer crosses, not only in the gap beside it.
+        /// </summary>
+        private void ViewBar_OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            _search?.RevealNavigationPane();
+        }
+
         private void SetThumbnailSize(int size)
         {
             _settings.ThumbnailSize = size;
@@ -812,6 +822,15 @@ namespace Diffusion.Toolkit
 
                 _navigatorService.Goto(url);
             });
+
+            _model.ToggleNavigationAutoHideCommand = new RelayCommand<object>((o) =>
+            {
+                // SetNavigationAutoHide writes IsNavigationAutoHideEnabled back onto this model,
+                // which is what lights the button up
+                _search?.ToggleNavigationAutoHide();
+            });
+
+            _model.IsNavigationAutoHideEnabled = _search.IsNavigationAutoHideEnabled;
 
             _navigatorService.OnNavigate += (o, args) =>
             {

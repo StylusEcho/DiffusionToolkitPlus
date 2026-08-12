@@ -124,9 +124,18 @@ public class MainModel : BaseNotify
     }
 
     /// <summary>
-    /// Mirrors the sidecar auto-hide setting so the pane's toggle button can show its state.
+    /// Mirrors the sidecar auto-hide setting so the toggle button on the view bar can show its state.
     /// </summary>
     public bool IsNavigationAutoHideEnabled
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
+    /// Turns navigation pane auto-hide on and off. Bound to the button at the foot of the view bar.
+    /// </summary>
+    public ICommand ToggleNavigationAutoHideCommand
     {
         get;
         set => SetField(ref field, value);

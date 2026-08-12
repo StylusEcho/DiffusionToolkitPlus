@@ -8,6 +8,7 @@
 	<UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>diffusion-toolkit.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>Diffusion.Toolkit.Plus</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

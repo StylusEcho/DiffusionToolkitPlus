@@ -28,6 +28,15 @@
                 <Setter Property="BorderThickness" Value="0"></Setter>
                 <Setter Property="IsReadOnly" Value="True"></Setter>
             </Style>
+            <!-- Field captions would otherwise pick up the theme's ForegroundBrush, which is dimmer
+                 than the values beside them. Labels carrying an explicit style keep it. -->
+            <Style TargetType="Label">
+                <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}}"></Setter>
+                <Setter Property="Background" Value="Transparent"></Setter>
+            </Style>
+            <Style TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}}"></Setter>
+            </Style>
         </Grid.Resources>
         <Grid.ContextMenu>
             <ContextMenu>

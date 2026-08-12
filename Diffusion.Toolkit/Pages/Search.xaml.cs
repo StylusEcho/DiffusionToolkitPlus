@@ -335,6 +335,8 @@ namespace Diffusion.Toolkit.Pages
 
             });
 
+            _model.ToggleTypeFilterCommand = new RelayCommand<string>(ToggleTypeFilter);
+
             _model.OpenCommand = new RelayCommand<object>(async (o) =>
             {
                 if (_currentModeSettings.ViewMode == ViewMode.Folder &&
@@ -665,11 +667,15 @@ namespace Diffusion.Toolkit.Pages
 
         private void NavThumbWidthChanged(object? sender, EventArgs e)
         {
+            if (_suppressNavWidthPersist) return;
+
             ServiceLocator.Settings.NavigationThumbnailGridWidth = NavigationThumbnailGrid.ColumnDefinitions[0].Width.ToString();
         }
 
         private void NavThumbWidthChanged2(object? sender, EventArgs e)
         {
+            if (_suppressNavWidthPersist) return;
+
             ServiceLocator.Settings.NavigationThumbnailGridWidth2 = NavigationThumbnailGrid.ColumnDefinitions[2].Width.ToString();
         }
 
@@ -1962,6 +1968,13 @@ namespace Diffusion.Toolkit.Pages
         private bool _navigationAutoCollapsed;
 
         /// <summary>
+        /// Set while the auto-hide layout drives the navigation columns itself. The widths it
+        /// writes describe the overlay, not a size the user chose, so they must not be persisted -
+        /// collapsing column 0 to zero would otherwise be saved and restored as a zero-width pane.
+        /// </summary>
+        private bool _suppressNavWidthPersist;
+
+        /// <summary>
         /// Width of the strip at the left edge that brings an auto-hidden navigation pane back.
         /// </summary>
         private const int NavigationRevealZone = 12;
@@ -1986,45 +1999,67 @@ namespace Diffusion.Toolkit.Pages
             ApplyNavigationLayout();
         }
 
-        private void ToggleNavigationAutoHide_OnClick(object sender, RoutedEventArgs e)
-        {
-            SetNavigationAutoHide(!AutoHideEnabled);
-        }
-
         /// <summary>
         /// An auto-hiding pane floats over the thumbnails rather than squeezing them, so the grid
         /// doesn't reflow every time it appears and disappears.
         /// </summary>
         private void ApplyNavigationLayout()
         {
-            if (AutoHideEnabled)
+            _suppressNavWidthPersist = true;
+
+            try
             {
-                var width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth);
+                if (AutoHideEnabled)
+                {
+                    var width = GetNavigationPaneWidth();
 
-                NavigationPanel.Width = width.IsAbsolute && width.Value > 0 ? width.Value : 250;
-                NavigationPanel.HorizontalAlignment = HorizontalAlignment.Left;
-                Panel.SetZIndex(NavigationPanel, 10);
-                Grid.SetColumnSpan(NavigationPanel, 3);
+                    NavigationPanel.Width = width.IsAbsolute && width.Value > 0 ? width.Value : 250;
+                    NavigationPanel.HorizontalAlignment = HorizontalAlignment.Left;
+                    Panel.SetZIndex(NavigationPanel, 10);
+                    Grid.SetColumnSpan(NavigationPanel, 3);
 
-                // The thumbnails take the whole width and the pane sits on top of them
-                NavigationThumbnailGrid.ColumnDefinitions[0].Width = new GridLength(0);
-                NavigationThumbnailGrid.ColumnDefinitions[2].Width = new GridLength(1, GridUnitType.Star);
+                    // The thumbnails take the whole width and the pane sits on top of them
+                    NavigationThumbnailGrid.ColumnDefinitions[0].Width = new GridLength(0);
+                    NavigationThumbnailGrid.ColumnDefinitions[2].Width = new GridLength(1, GridUnitType.Star);
 
-                GridSplitter2.Visibility = Visibility.Collapsed;
+                    GridSplitter2.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    NavigationPanel.Width = double.NaN;
+                    NavigationPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+                    Panel.SetZIndex(NavigationPanel, 0);
+                    Grid.SetColumnSpan(NavigationPanel, 1);
+
+                    GridSplitter2.Visibility = Visibility.Visible;
+
+                    NavigationThumbnailGrid.ColumnDefinitions[0].Width = GetNavigationPaneWidth();
+                    NavigationThumbnailGrid.ColumnDefinitions[2].Width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth2);
+                }
             }
-            else
+            finally
             {
-                NavigationPanel.Width = double.NaN;
-                NavigationPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
-                Panel.SetZIndex(NavigationPanel, 0);
-                Grid.SetColumnSpan(NavigationPanel, 1);
-
-                GridSplitter2.Visibility = Visibility.Visible;
-
-                NavigationThumbnailGrid.ColumnDefinitions[0].Width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth);
-                NavigationThumbnailGrid.ColumnDefinitions[2].Width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth2);
+                _suppressNavWidthPersist = false;
             }
         }
+
+        /// <summary>
+        /// The stored navigation pane width, falling back to the default when it is zero. Earlier
+        /// builds persisted the collapsed overlay width, so a saved zero has to be recovered from
+        /// rather than restored faithfully - it would bring the pane back with no width at all.
+        /// </summary>
+        private GridLength GetNavigationPaneWidth()
+        {
+            var width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth);
+
+            if (width.Value > 0) return width;
+
+            ServiceLocator.Settings.NavigationThumbnailGridWidth = DefaultNavigationPaneWidth;
+
+            return GetGridLength(DefaultNavigationPaneWidth);
+        }
+
+        private const string DefaultNavigationPaneWidth = "*";
 
         private void NavigationPane_OnMouseEnter(object sender, MouseEventArgs e)
         {
@@ -2066,9 +2101,48 @@ namespace Diffusion.Toolkit.Pages
 
             if (e.GetPosition(MainGrid).X > NavigationRevealZone) return;
 
+            RevealNavigationPane();
+        }
+
+        /// <summary>
+        /// Brings an auto-hidden pane back. Also called from the main window's view bar, which sits
+        /// outside this page and so is the first thing the pointer crosses on its way to the edge.
+        /// </summary>
+        public void RevealNavigationPane()
+        {
+            if (!_navigationAutoCollapsed) return;
+            if (!AutoHideEnabled) return;
+
             _navigationAutoCollapsed = false;
 
             NavigationPanel.Visibility = Visibility.Visible;
+        }
+
+        /// <summary>
+        /// Adds or removes one media type from the filter, leaving the other alone. Checking none
+        /// clears UseTypes so the filter stops constraining the type at all, which is what the
+        /// Filter window's own checkboxes do and is not the same as checking both.
+        /// </summary>
+        private void ToggleTypeFilter(string? typeName)
+        {
+            if (!Enum.TryParse<ImageType>(typeName, out var type)) return;
+
+            var item = _model.Filter.Types.FirstOrDefault(t => t.Value is ImageType value && value == type);
+
+            if (item == null) return;
+
+            item.IsChecked = !item.IsChecked;
+
+            _model.Filter.UseTypes = _model.Filter.Types.Any(t => t.IsChecked);
+
+            SearchImages(null);
+        }
+
+        public bool IsNavigationAutoHideEnabled => AutoHideEnabled;
+
+        public void ToggleNavigationAutoHide()
+        {
+            SetNavigationAutoHide(!AutoHideEnabled);
         }
 
         public void SetNavigationVisible(bool visible)
@@ -2088,7 +2162,7 @@ namespace Diffusion.Toolkit.Pages
                 //NavigationThumbnailGrid.ColumnDefinitions[0].Width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth);
                 //NavigationThumbnailGrid.ColumnDefinitions[2].Width = new GridLength(0, GridUnitType.Auto);
 
-                NavigationThumbnailGrid.ColumnDefinitions[0].Width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth);
+                NavigationThumbnailGrid.ColumnDefinitions[0].Width = GetNavigationPaneWidth();
                 NavigationThumbnailGrid.ColumnDefinitions[2].Width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth2);
 
                 var widthDescriptor = DependencyPropertyDescriptor.FromProperty(ColumnDefinition.WidthProperty, typeof(ItemsControl));

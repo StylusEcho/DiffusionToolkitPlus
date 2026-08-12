@@ -78,6 +78,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="70"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                     <Label VerticalAlignment="Center" FontSize="22" FontWeight="DemiBold" Content="{Binding ModeName}"></Label>
@@ -96,7 +97,8 @@
                     </Button>
 
 
-                    <Button Content="{lex:Loc Search.Folders.AddRoot}" Margin="10,0,0,0" Height="25" MinWidth="120" Click="AddRootFolder_OnClick">
+                    <!-- Same destination as the Home button in the folder tree's header -->
+                    <Button Content="{lex:Loc Search.Folders.ManageRoots}" Margin="10,0,0,0" Height="25" MinWidth="140" Click="ManageRootFolders_OnClick">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource BorderlessButton}">
                                 <Setter Property="Visibility" Value="Collapsed"></Setter>
@@ -147,6 +149,47 @@
                 </ComboBox>
                 <ComboBox Height="28" Width="60" VerticalContentAlignment="Center" ItemsSource="{Binding SortOrderOptions}" DisplayMemberPath="Name" SelectedValue="{Binding SortDirection}" SelectedValuePath="Value" Grid.Column="5" Margin="0,0,10,0">
                 </ComboBox>
+
+                <!-- Media type filters. These drive the same Filter.Types checkboxes as the Filter
+                     window, so the two stay in step and neither excludes the other -->
+                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <Button Width="28" Height="28" Style="{StaticResource BorderlessButton}"
+                            ToolTip="{lex:Loc Filter.Metadata.Types.Image}"
+                            Command="{Binding ToggleTypeFilterCommand}" CommandParameter="Image">
+                        <fa:ImageAwesome Icon="FileImageOutline" Height="16" Margin="2" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <fa:ImageAwesome.Style>
+                                <Style TargetType="fa:ImageAwesome">
+                                    <Setter Property="Opacity" Value="0.4"></Setter>
+                                    <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"></Setter>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Filter.Types[0].IsChecked}" Value="True">
+                                            <Setter Property="Opacity" Value="1.0"></Setter>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"></Setter>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </fa:ImageAwesome.Style>
+                        </fa:ImageAwesome>
+                    </Button>
+                    <Button Width="28" Height="28" Style="{StaticResource BorderlessButton}"
+                            ToolTip="{lex:Loc Filter.Metadata.Types.Video}"
+                            Command="{Binding ToggleTypeFilterCommand}" CommandParameter="Video">
+                        <fa:ImageAwesome Icon="Film" Height="16" Margin="2" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <fa:ImageAwesome.Style>
+                                <Style TargetType="fa:ImageAwesome">
+                                    <Setter Property="Opacity" Value="0.4"></Setter>
+                                    <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"></Setter>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Filter.Types[1].IsChecked}" Value="True">
+                                            <Setter Property="Opacity" Value="1.0"></Setter>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"></Setter>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </fa:ImageAwesome.Style>
+                        </fa:ImageAwesome>
+                    </Button>
+                </StackPanel>
 
             </Grid>
             <Grid Grid.Row="1" Margin="2" Visibility="Collapsed">
@@ -244,32 +287,6 @@
                                        Background="{DynamicResource PrimaryBrush}"
                                        MouseEnter="NavigationPane_OnMouseEnter"
                                        MouseLeave="NavigationPane_OnMouseLeave">
-
-                                <!-- Auto-hide toggle, bottom left, opposite the section icons -->
-                                <Grid DockPanel.Dock="Bottom" Height="26" Background="{x:Null}">
-                                    <Button HorizontalAlignment="Left" Width="26"
-                                            Style="{StaticResource BorderlessButton}"
-                                            ToolTip="{lex:Loc Search.Navigation.Buttons.AutoHide.ToolTip}"
-                                            Click="ToggleNavigationAutoHide_OnClick">
-                                        <fa:FontAwesome Icon="EyeSlash">
-                                            <fa:FontAwesome.Style>
-                                                <Style TargetType="fa:FontAwesome">
-                                                    <Setter Property="Opacity" Value="1.0"></Setter>
-                                                    <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"></Setter>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding MainModel.IsNavigationAutoHideEnabled}" Value="True">
-                                                            <Setter Property="Opacity" Value="1.0"></Setter>
-                                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"></Setter>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding MainModel.IsNavigationAutoHideEnabled}" Value="False">
-                                                            <Setter Property="Opacity" Value="0.4"></Setter>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </fa:FontAwesome.Style>
-                                        </fa:FontAwesome>
-                                    </Button>
-                                </Grid>
 
                                 <ScrollViewer Focusable="True" x:Name="NavigationScrollViewer" VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
