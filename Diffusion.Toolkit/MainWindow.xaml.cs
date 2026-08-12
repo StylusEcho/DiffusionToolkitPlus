@@ -472,6 +472,16 @@ namespace Diffusion.Toolkit
             _search?.RevealNavigationPane();
         }
 
+        private void ViewBar_OnMouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            _search?.SetPointerOverViewBar(true);
+        }
+
+        private void ViewBar_OnMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            _search?.SetPointerOverViewBar(false);
+        }
+
         private void SetThumbnailSize(int size)
         {
             _settings.ThumbnailSize = size;

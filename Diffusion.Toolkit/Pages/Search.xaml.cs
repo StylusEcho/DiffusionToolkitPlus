@@ -1968,6 +1968,13 @@ namespace Diffusion.Toolkit.Pages
         private bool _navigationAutoCollapsed;
 
         /// <summary>
+        /// True while the pointer is over the main window's view bar, which is adjacent to the pane
+        /// and therefore not somewhere the pane should hide.
+        /// </summary>
+        private bool _pointerOverViewBar;
+
+
+        /// <summary>
         /// Set while the auto-hide layout drives the navigation columns itself. The widths it
         /// writes describe the overlay, not a size the user chose, so they must not be persisted -
         /// collapsing column 0 to zero would otherwise be saved and restored as a zero-width pane.
@@ -2090,7 +2097,32 @@ namespace Diffusion.Toolkit.Pages
             _navigationAutoCollapsed = false;
         }
 
+        /// <summary>
+        /// Tracks the pointer over the main window's view bar, which sits immediately left of the
+        /// pane. The bar is the route to a hidden pane, so the pane must not hide while the pointer
+        /// is on it, and must come back if it is already hidden.
+        /// </summary>
+        public void SetPointerOverViewBar(bool isOver)
+        {
+            _pointerOverViewBar = isOver;
+
+            if (isOver)
+            {
+                RevealNavigationPane();
+            }
+            else
+            {
+                // Leaving the bar for anything other than the pane itself should still hide it
+                ScheduleNavigationCollapse();
+            }
+        }
+
         private void NavigationPane_OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            ScheduleNavigationCollapse();
+        }
+
+        private void ScheduleNavigationCollapse()
         {
             if (!AutoHideEnabled) return;
 
@@ -2106,6 +2138,12 @@ namespace Diffusion.Toolkit.Pages
         {
             if (!AutoHideEnabled) return;
             if (NavigationPanel.IsMouseOver) return;
+
+            // Moving from the pane onto the view bar, or into the inset between the two, is not
+            // moving away from the pane - that is how you reach it. Hiding here would collapse the
+            // pane and immediately reveal it again as the pointer carried on.
+            if (_pointerOverViewBar || IsPointerInNavigationRevealZone()) return;
+
             if (_model.MainModel.Settings is not { NavigationSection.ShowSection: true }) return;
 
             _navigationAutoCollapsed = true;
@@ -2119,12 +2157,27 @@ namespace Diffusion.Toolkit.Pages
         /// </summary>
         private void MainGrid_OnMouseMove(object sender, MouseEventArgs e)
         {
-            if (!_navigationAutoCollapsed) return;
             if (!AutoHideEnabled) return;
 
             if (e.GetPosition(MainGrid).X > NavigationRevealZone) return;
 
             RevealNavigationPane();
+        }
+
+        /// <summary>
+        /// The page is inset from the view bar, and that inset falls left of the pane. It counts as
+        /// beside the pane rather than away from it.
+        /// </summary>
+        /// <remarks>
+        /// Read on demand rather than tracked from MouseMove: the pointer can leave the page through
+        /// this strip, and a cached flag would stay set with no further move events to clear it,
+        /// leaving the pane stuck open.
+        /// </remarks>
+        private bool IsPointerInNavigationRevealZone()
+        {
+            var x = Mouse.GetPosition(MainGrid).X;
+
+            return x >= 0 && x <= NavigationRevealZone;
         }
 
         /// <summary>
