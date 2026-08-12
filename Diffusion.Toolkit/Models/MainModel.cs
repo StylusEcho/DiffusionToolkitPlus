@@ -123,6 +123,58 @@ public class MainModel : BaseNotify
         set => SetField(ref _status, value);
     }
 
+    /// <summary>
+    /// True while the library is being read at startup. The search page shows a progress overlay
+    /// and holds off searching until this clears.
+    /// </summary>
+    public bool IsLoadingLibrary
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    public string LibraryLoadStatus
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    public int LibraryLoadProgress
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    public int LibraryLoadTotal
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
+    /// Marks the start of the startup load, with the number of steps that will be reported.
+    /// </summary>
+    public void StartLibraryLoad(int steps, string status)
+    {
+        LibraryLoadTotal = steps;
+        LibraryLoadProgress = 0;
+        LibraryLoadStatus = status;
+        IsLoadingLibrary = true;
+    }
+
+    public void AdvanceLibraryLoad(string status)
+    {
+        LibraryLoadProgress++;
+        LibraryLoadStatus = status;
+    }
+
+    public void EndLibraryLoad()
+    {
+        LibraryLoadProgress = LibraryLoadTotal;
+        IsLoadingLibrary = false;
+        LibraryLoadStatus = string.Empty;
+    }
+
     public bool IsBusy
     {
         get;
@@ -394,6 +446,15 @@ public class MainModel : BaseNotify
     }
 
     public bool HasSelectedTags
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
+    /// Adds or removes the selection from the quick album. Bound to B.
+    /// </summary>
+    public ICommand ToggleQuickAlbumCommand
     {
         get;
         set => SetField(ref field, value);

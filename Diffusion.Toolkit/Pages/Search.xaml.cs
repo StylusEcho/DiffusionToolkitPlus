@@ -185,6 +185,10 @@ namespace Diffusion.Toolkit.Pages
                     SetView("images");
                 }
 
+                // Startup navigates here early so the progress overlay is visible. The album,
+                // model and tag collections a search reads aren't populated yet, so wait.
+                if (ServiceLocator.MainModel.IsLoadingLibrary) return;
+
                 SearchImages(null);
             }
 

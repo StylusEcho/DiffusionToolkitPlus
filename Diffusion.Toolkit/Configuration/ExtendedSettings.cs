@@ -22,6 +22,7 @@ public class ExtendedSettings : SettingsContainer
         MuteSidePanelVideo = true;
         InfoOverlayOnRightEdge = false;
         InfoOverlayEdgeWidth = 24;
+        QuickAlbumName = "Quick Album";
         VideoSectionState = AccordionState.Expanded;
         VideoMetadata = new VideoMetadataSettings();
     }
@@ -68,6 +69,16 @@ public class ExtendedSettings : SettingsContainer
     }
 
     public AccordionState VideoSectionState
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Album the quick collection shortcut targets. It is an ordinary album, so only the choice of
+    /// which one is fork-specific - the album itself lives in the database as normal.
+    /// </summary>
+    public string QuickAlbumName
     {
         get;
         set => UpdateValue(ref field, value);

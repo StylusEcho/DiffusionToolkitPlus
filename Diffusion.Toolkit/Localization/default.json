@@ -440,9 +440,21 @@
   "Metadata.Video.AudioFormat": "Audio Format",
   "Metadata.Video.AudioBitrate": "Audio Bitrate",
   "Settings.Video.MuteSidePanel": "Mute video in the preview pane",
-  "Settings.Video.InfoOverlayOnRightEdge": "Show info overlay when the cursor reaches the right edge (full screen)",
   "Settings.Video.MetadataFields": "Video details to show in the info pane",
   "Preview.Controls.PlayPause": "Play / Pause",
   "Preview.Controls.Loop": "Loop",
-  "Preview.Controls.Mute": "Mute"
+  "Preview.Controls.Mute": "Mute",
+  "Main.Status.Loading.Albums": "Loading albums...",
+  "Main.Status.Loading.Queries": "Loading saved searches...",
+  "Main.Status.Loading.Tags": "Loading tags...",
+  "Main.Status.Loading.Models": "Loading models...",
+  "Main.Status.Loading.ImageModels": "Reading models used by your images...",
+  "Main.Status.Loading.Folders": "Loading folders...",
+  "Menu.View.ToggleQuickAlbum": "Add/Remove from Quick Album",
+  "Actions.Albums.QuickAlbum.Title": "Quick Album",
+  "Actions.Albums.QuickAlbum.Added": "{images} added to \"{album}\"",
+  "Actions.Albums.QuickAlbum.Removed": "{images} removed from \"{album}\"",
+  "Settings.SidecarSetting.ToolTip": "📎 Stored in config.extended.json, not config.json. This setting only exists in this build - the original Diffusion Toolkit ignores it, and it is never written to the database.",
+  "Settings.General.InfoOverlayOnRightEdge": "Show info overlay when the cursor reaches the right edge (full screen)",
+  "Settings.General.QuickAlbumName": "Quick Album name"
 }

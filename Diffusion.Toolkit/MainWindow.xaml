@@ -24,7 +24,9 @@
         Height="450" Width="800">
     <Window.InputBindings>
         <common:BareKeyBinding Key="I" Command="{Binding ToggleInfoCommand}"></common:BareKeyBinding>
-        <common:BareKeyBinding Key="B" Command="{Binding ToggleNSFWBlurCommand}"></common:BareKeyBinding>
+        <!-- B is the quick album shortcut; NSFW blur moved to Ctrl+B to make room for it -->
+        <common:BareKeyBinding Key="B" Command="{Binding ToggleQuickAlbumCommand}"></common:BareKeyBinding>
+        <KeyBinding Modifiers="Control" Key="B" Command="{Binding ToggleNSFWBlurCommand}"></KeyBinding>
         <KeyBinding Key="Escape" Command="{Binding Escape}"></KeyBinding>
         <KeyBinding Key="F1" Command="{Binding HelpCommand}"></KeyBinding>
         <KeyBinding Key="F3" Command="{Binding ToggleNavigationPane}"></KeyBinding>
@@ -376,7 +378,7 @@
                     <MenuItem Header="512x512" IsChecked="{Binding ThumbnailSize, Converter={StaticResource thumbSizeChecked}, ConverterParameter=512}" Command="{Binding SetThumbnailSize}" CommandParameter="512"/>
                 </MenuItem>
                 <Separator/>
-                <MenuItem Header="{lex:Loc Menu.View.BlurNSFW}" IsChecked="{Binding NSFWBlur}" InputGestureText="B" Command="{Binding ToggleNSFWBlurCommand}"/>
+                <MenuItem Header="{lex:Loc Menu.View.BlurNSFW}" IsChecked="{Binding NSFWBlur}" InputGestureText="Ctrl+B" Command="{Binding ToggleNSFWBlurCommand}"/>
                 <MenuItem Header="{lex:Loc Menu.View.HideNSFWFromResults}" IsChecked="{Binding HideNSFW}" Command="{Binding ToggleHideNSFW}" InputGestureText="Ctrl+Shift+N"/>
                 <MenuItem Header="{lex:Loc Menu.View.HideDeletedFromResults}" IsChecked="{Binding HideDeleted}" Command="{Binding ToggleHideDeleted}" InputGestureText="Ctrl+Shift+D"/>
                 <MenuItem Header="{lex:Loc Menu.View.HideUnavailableFromResults}" IsChecked="{Binding HideUnavailable}" Command="{Binding ToggleHideUnavailable}" InputGestureText="Ctrl+Shift+U"/>
@@ -392,6 +394,7 @@
                 <Separator/>
                 <MenuItem Header="{lex:Loc Menu.View.AutoAdvance}" IsChecked="{Binding AutoAdvance}" Command="{Binding ToggleAutoAdvance}"  InputGestureText="Ctrl+Shift+T"/>
                 <Separator/>
+                <MenuItem Header="{lex:Loc Menu.View.ToggleQuickAlbum}" Command="{Binding ToggleQuickAlbumCommand}" InputGestureText="B"/>
                 <MenuItem Header="{lex:Loc Menu.View.ToggleInfo}" Command="{Binding ToggleInfoCommand}" InputGestureText="I"/>
                 <MenuItem Header="{lex:Loc Menu.View.TogglePreview}" Command="{Binding TogglePreview}" InputGestureText="Ctrl+Shift+P"/>
                 <MenuItem Header="{lex:Loc Menu.View.PopoutPreview}" Command="{Binding PoputPreview}"/>
