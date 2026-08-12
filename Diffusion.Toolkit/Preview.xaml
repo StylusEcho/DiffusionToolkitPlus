@@ -42,7 +42,7 @@
         <KeyBinding Key="T" Modifiers="Control+Shift" Command="{Binding ToggleAutoAdvance}"></KeyBinding>
         <KeyBinding Key="I" Command="{Binding ToggleInfo}"></KeyBinding>
         <KeyBinding Key="F11" Command="{Binding ToggleFullScreen}"></KeyBinding>
-        <KeyBinding Key="Space" Command="{Binding StartStopSlideShow}"></KeyBinding>
+        <!-- Space is handled in OnPreviewKeyDown so a focused control bar button can't steal it -->
         <KeyBinding Modifiers="Shift" Key="D1" Command="{Binding OpenWithCommand}" CommandParameter="1"></KeyBinding>
         <KeyBinding Modifiers="Shift" Key="D2" Command="{Binding OpenWithCommand}" CommandParameter="2"></KeyBinding>
         <KeyBinding Modifiers="Shift" Key="D3" Command="{Binding OpenWithCommand}" CommandParameter="3"></KeyBinding>
@@ -54,7 +54,9 @@
         <KeyBinding Modifiers="Shift" Key="D9" Command="{Binding OpenWithCommand}" CommandParameter="9"></KeyBinding>
         <KeyBinding Modifiers="Shift" Key="D0" Command="{Binding OpenWithCommand}" CommandParameter="10"></KeyBinding>
     </Window.InputBindings>
-    <Grid Name="BackgroundGrid" Margin="-2" MouseMove="Window_OnMouseMove">
+    <!-- Transparent rather than unset so the whole window area is hit testable and the edge and
+         bottom hover gestures still fire where no child happens to be drawn -->
+    <Grid Name="BackgroundGrid" Margin="-2" Background="Transparent">
 
         <controls:PreviewPane
             NSFWBlur="{Binding NSFWBlur}" 
@@ -126,30 +128,18 @@
                         </Style>
                     </Grid.Style>
 
-                    <controls:MetadataPanel Margin="10,30,10,60" Background="#70000000" CurrentImage="{Binding CurrentImage}"
+                    <!-- Anchored to the top right and opaque. Top alignment means the panel is only
+                         as tall as the sections it actually shows, and the inner ScrollViewer caps
+                         it at the space left between the top and bottom margins. -->
+                    <controls:MetadataPanel Margin="10,30,10,30"
+                                            x:Name="InfoOverlayPanel"
+                                            VerticalAlignment="Top"
+                                            HorizontalAlignment="Stretch"
+                                            Background="{DynamicResource PrimaryBrush}"
+                                            TextForeground="{DynamicResource ForegroundBrush}"
+                                            CurrentImage="{Binding CurrentImage}"
                                             MouseLeave="InfoOverlay_OnMouseLeave">
                     </controls:MetadataPanel>
-
-                </Grid>
-
-                <Grid Background="{x:Null}" Margin="0,0,10,10" IsHitTestVisible="true">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition/>
-                        <ColumnDefinition Width="60"/>
-                        <ColumnDefinition Width="70"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition/>
-                        <RowDefinition Height="28"/>
-                    </Grid.RowDefinitions>
-
-                    <Button Style="{DynamicResource BorderlessButton}" Grid.Row="1" Grid.Column="1" Background="Transparent" BorderBrush="Transparent" BorderThickness="0" Command="{Binding CurrentImage.ToggleParameters}">
-                        <fa:ImageAwesome ToolTip="{lex:Loc Metadata.ShowInfo}" Icon="InfoCircle" Width="24"  Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <fa:ImageAwesome.Effect>
-                                <DropShadowEffect BlurRadius="4" Opacity="0.8" ShadowDepth="3" Direction="-90"></DropShadowEffect>
-                            </fa:ImageAwesome.Effect>
-                        </fa:ImageAwesome>
-                    </Button>
 
                 </Grid>
 

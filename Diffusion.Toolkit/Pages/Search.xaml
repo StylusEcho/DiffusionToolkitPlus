@@ -970,6 +970,18 @@
                                             <Label VerticalAlignment="Center" HorizontalAlignment="Center" Grid.Row="1" FontSize="22" Content="{lex:Loc Search.NoImagePaths}"></Label>
                                             <Button VerticalAlignment="Center" HorizontalAlignment="Center" Grid.Row="2" FontSize="18" Content="{lex:Loc Search.Folders.AddRoot}" Margin="0,10,0,0" Padding="20,10" Click="AddRootFolder_OnClick"></Button>
                                         </Grid>
+
+                                        <!-- Shown while the database and folder tree are read at startup -->
+                                        <Grid Background="{DynamicResource PrimaryBrush}"
+                                              Visibility="{Binding MainModel.IsLoadingLibrary, Converter={StaticResource boolToVisCol}}">
+                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="360">
+                                                <Label HorizontalAlignment="Center" FontSize="18" Content="{Binding MainModel.LibraryLoadStatus}"></Label>
+                                                <ProgressBar Height="6" Margin="0,14,0,0"
+                                                             Minimum="0"
+                                                             Maximum="{Binding MainModel.LibraryLoadTotal}"
+                                                             Value="{Binding MainModel.LibraryLoadProgress}"></ProgressBar>
+                                            </StackPanel>
+                                        </Grid>
                                     </Grid>
 
 
@@ -1023,8 +1035,9 @@
                     <RowDefinition Height="50"/>
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="1" Background="#A0000000" Margin="10" Visibility="{Binding CurrentImage.IsSideParametersVisible, Converter={StaticResource boolToVis}}">
-                    <controls:MetadataPanel CurrentImage="{Binding CurrentImage}" MetadataSection="{Binding MetadataSection}">
+                <Grid Grid.Row="1" Background="{DynamicResource PrimaryBrush}" Margin="10" Visibility="{Binding CurrentImage.IsSideParametersVisible, Converter={StaticResource boolToVis}}">
+                    <controls:MetadataPanel CurrentImage="{Binding CurrentImage}" MetadataSection="{Binding MetadataSection}"
+                                            TextForeground="{DynamicResource ForegroundBrush}">
                     </controls:MetadataPanel>
                 </Grid>
             </Grid>
@@ -1038,7 +1051,8 @@
                           Height="5"
             />
 
-            <controls:MetadataPanel Grid.Row="2"   CurrentImage="{Binding CurrentImage}">
+            <controls:MetadataPanel Grid.Row="2" CurrentImage="{Binding CurrentImage}"
+                                    TextForeground="{DynamicResource ForegroundBrush}">
             </controls:MetadataPanel>
 
         </Grid>

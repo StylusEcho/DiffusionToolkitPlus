@@ -1,9 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using Diffusion.Database.Models;
 using Diffusion.Toolkit.Localization;
 using Diffusion.Toolkit.Models;
 
@@ -14,6 +17,81 @@ public class AlbumService
     private string GetLocalizedText(string key)
     {
         return (string)JsonLocalizationProvider.Instance.GetLocalizedObject(key, null, CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Reloads the album list in the navigation pane. Set by the main window.
+    /// </summary>
+    public Func<Task>? ReloadAlbums;
+
+    /// <summary>
+    /// Lightroom style quick collection. Adds the selection to a single named album, or takes it
+    /// out again when everything selected is already in there.
+    /// </summary>
+    /// <remarks>
+    /// This is an ordinary album row, not a new concept in the database, so the original Diffusion
+    /// Toolkit lists and edits it like any other album.
+    /// </remarks>
+    public async Task ToggleQuickAlbum()
+    {
+        var entries = ServiceLocator.MainModel.SelectedImages
+            .Where(d => d.EntryType == EntryType.File)
+            .ToList();
+
+        if (!entries.Any()) return;
+
+        var name = ServiceLocator.ExtendedSettings.QuickAlbumName;
+
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        var album = ServiceLocator.DataStore.FindAlbumByName(name)
+                    ?? ServiceLocator.DataStore.CreateAlbum(new Album() { Name = name });
+
+        var existing = ServiceLocator.DataStore.GetAlbumImageIds(album.Id).ToHashSet();
+
+        // Everything already in the album means the shortcut should take it back out
+        var isRemoval = entries.All(d => existing.Contains(d.Id));
+
+        string message;
+
+        if (isRemoval)
+        {
+            var count = ServiceLocator.DataStore.RemoveImagesFromAlbum(album.Id, entries.Select(d => d.Id));
+
+            foreach (var entry in entries)
+            {
+                entry.AlbumCount = Math.Max(0, entry.AlbumCount - 1);
+            }
+
+            message = GetLocalizedText("Actions.Albums.QuickAlbum.Removed")
+                .Replace("{images}", $"{count}")
+                .Replace("{album}", album.Name);
+        }
+        else
+        {
+            var added = entries.Where(d => !existing.Contains(d.Id)).ToList();
+
+            ServiceLocator.DataStore.AddImagesToAlbum(album.Id, added.Select(d => d.Id));
+
+            foreach (var entry in added)
+            {
+                entry.AlbumCount++;
+            }
+
+            message = GetLocalizedText("Actions.Albums.QuickAlbum.Added")
+                .Replace("{images}", $"{added.Count}")
+                .Replace("{album}", album.Name);
+        }
+
+        ServiceLocator.ToastService.Toast(message, GetLocalizedText("Actions.Albums.QuickAlbum.Title"));
+
+        UpdateSelectedImageAlbums();
+        ReloadContextMenus();
+
+        if (ReloadAlbums != null)
+        {
+            await ReloadAlbums();
+        }
     }
 
     public void UpdateSelectedImageAlbums()

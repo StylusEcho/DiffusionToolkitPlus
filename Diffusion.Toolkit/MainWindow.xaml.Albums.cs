@@ -19,6 +19,10 @@ namespace Diffusion.Toolkit
         {
             _model.AddSelectedImagesToAlbum = AddSelectedImagesToAlbum;
 
+            ServiceLocator.AlbumService.ReloadAlbums = LoadAlbums;
+
+            _model.ToggleQuickAlbumCommand = new AsyncCommand<object>((o) => ServiceLocator.AlbumService.ToggleQuickAlbum());
+
 
             _model.CreateAlbumCommand = new AsyncCommand<object>(async (o) =>
             {

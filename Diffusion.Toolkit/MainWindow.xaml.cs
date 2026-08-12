@@ -820,32 +820,35 @@ namespace Diffusion.Toolkit
             };
 
 
-            //_navigatorService.Goto("search");
-
             Logger.Log($"Loading models");
 
-            _model.Status = GetLocalizedText("Main.Status.Loading");
+            _model.StartLibraryLoad(6, GetLocalizedText("Main.Status.Loading"));
+
+            // Show the library view straight away so the progress overlay is visible while we
+            // read. Search.Navigate holds off actually searching until IsLoadingLibrary clears.
+            _navigatorService.Goto("search");
 
             // Albums, queries, tags and the model list are independent of each other and are
             // all loaded off the UI thread, so start them together and let them overlap
             // instead of blocking the window one after the other.
-            var albumsTask = LoadAlbums();
-            var queriesTask = LoadQueries();
-            var tagsTask = LoadTags();
-            var modelsTask = LoadModels();
+            var albumsTask = TrackLibraryLoad(LoadAlbums(), "Main.Status.Loading.Albums");
+            var queriesTask = TrackLibraryLoad(LoadQueries(), "Main.Status.Loading.Queries");
+            var tagsTask = TrackLibraryLoad(LoadTags(), "Main.Status.Loading.Tags");
+            var modelsTask = TrackLibraryLoad(LoadModels(), "Main.Status.Loading.Models");
 
             await Task.WhenAll(albumsTask, queriesTask, tagsTask, modelsTask);
 
             // Image model names are resolved against the models loaded above, so this has to
             // come after them.
-            await LoadImageModels();
+            await TrackLibraryLoad(LoadImageModels(), "Main.Status.Loading.ImageModels");
 
-            await InitFolders();
+            await TrackLibraryLoad(InitFolders(), "Main.Status.Loading.Folders");
 
             // The watchers need the root folder list, and creating them hits the filesystem,
             // which can stall on a disconnected network share
             await Task.Run(() => ServiceLocator.FolderService.CreateWatchers());
 
+            _model.EndLibraryLoad();
             _model.Status = string.Empty;
 
             ServiceLocator.ContextMenuService.Go();
@@ -943,6 +946,16 @@ namespace Diffusion.Toolkit
                 ShowReleaseNotes();
             }
             // Cleanup();
+        }
+
+        /// <summary>
+        /// Awaits a startup load step and ticks the library progress bar when it finishes.
+        /// </summary>
+        private async Task TrackLibraryLoad(Task task, string statusKey)
+        {
+            await task;
+
+            _model.AdvanceLibraryLoad(GetLocalizedText(statusKey));
         }
 
         private async Task Cleanup()

@@ -22,6 +22,17 @@
             <converters:IsIndexSelectedConverter x:Key="IsIndexSelectedConverter"></converters:IsIndexSelectedConverter>
             <converters:IndexOfConverter x:Key="IndexOfConverter"></converters:IndexOfConverter>
             <converters:NotNullConverter x:Key="NotNullConverter"></converters:NotNullConverter>
+
+            <!-- Marks a setting that is kept in the sidecar file rather than config.json, so it is
+                 invisible to the original Diffusion Toolkit -->
+            <Style x:Key="SidecarBadge" TargetType="TextBlock">
+                <Setter Property="Text" Value="📎"></Setter>
+                <Setter Property="FontSize" Value="12"></Setter>
+                <Setter Property="Margin" Value="6,0,0,0"></Setter>
+                <Setter Property="VerticalAlignment" Value="Center"></Setter>
+                <Setter Property="Cursor" Value="Help"></Setter>
+                <Setter Property="ToolTip" Value="{lex:Loc Settings.SidecarSetting.ToolTip}"></Setter>
+            </Style>
         </ResourceDictionary>
     </local:NavigationPage.Resources>
     <Grid Margin="0,0,0,10">
@@ -159,6 +170,19 @@
                             <CheckBox x:Name="WatchFolders" IsChecked="{Binding WatchFolders}" Margin="0,0,0,10"  ToolTip="{lex:Loc Settings.General.WatchFolders.ToolTip}" Content="{lex:Loc Settings.General.WatchFolders}"></CheckBox>-->
                             <CheckBox IsChecked="{Binding AutoRefresh}" Margin="0,0,0,10" ToolTip="{lex:Loc Settings.General.General.ToolTip}"  Content="{lex:Loc Settings.General.AutoRefresh}"></CheckBox>
                             <CheckBox IsChecked="{Binding ScanForNewImagesOnStartup}" Margin="0,0,0,10" Content="{lex:Loc Settings.Images.ScanForNewImagesOnStartup}"></CheckBox>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <CheckBox IsChecked="{Binding ExtendedSettings.InfoOverlayOnRightEdge, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
+                                          Content="{lex:Loc Settings.General.InfoOverlayOnRightEdge}"></CheckBox>
+                                <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Label VerticalContentAlignment="Center" Padding="0,0,6,0" Content="{lex:Loc Settings.General.QuickAlbumName}"></Label>
+                                <TextBox Width="220" Padding="4"
+                                         Text="{Binding ExtendedSettings.QuickAlbumName, RelativeSource={RelativeSource AncestorType=local:NavigationPage}, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+                                <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                            </StackPanel>
                         </StackPanel>
                         <!--<Label Content="{lex:Loc Settings.General.ExcludedFolders}"></Label>
                         <Grid Height="100">
@@ -274,13 +298,16 @@
                     <!-- LoopVideo lives in config.json and is shared with the original app -->
                     <CheckBox IsChecked="{Binding LoopVideo}" Margin="0,10,0,0" Content="{lex:Loc Settings.Video.LoopVideo}"></CheckBox>
 
-                    <!-- The rest are fork-only and are saved to the sidecar file, not config.json -->
-                    <CheckBox IsChecked="{Binding ExtendedSettings.MuteSidePanelVideo, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
-                              Margin="0,10,0,0" Content="{lex:Loc Settings.Video.MuteSidePanel}"></CheckBox>
-                    <CheckBox IsChecked="{Binding ExtendedSettings.InfoOverlayOnRightEdge, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
-                              Margin="0,10,0,0" Content="{lex:Loc Settings.Video.InfoOverlayOnRightEdge}"></CheckBox>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <CheckBox IsChecked="{Binding ExtendedSettings.MuteSidePanelVideo, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
+                                  Content="{lex:Loc Settings.Video.MuteSidePanel}"></CheckBox>
+                        <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                    </StackPanel>
 
-                    <TextBlock Foreground="{DynamicResource ForegroundBrush}" Margin="0,20,0,0" Text="{lex:Loc Settings.Video.MetadataFields}"></TextBlock>
+                    <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                        <TextBlock Foreground="{DynamicResource ForegroundBrush}" Text="{lex:Loc Settings.Video.MetadataFields}"></TextBlock>
+                        <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                    </StackPanel>
 
                     <StackPanel Margin="10,0,0,0"
                                 DataContext="{Binding ExtendedSettings.VideoMetadata, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}">

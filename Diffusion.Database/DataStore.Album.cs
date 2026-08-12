@@ -100,6 +100,46 @@ namespace Diffusion.Database
         }
 
 
+        /// <summary>
+        /// Finds an album by name, or null when there isn't one. Album names are unique.
+        /// </summary>
+        public Album? FindAlbumByName(string name)
+        {
+            using var db = OpenConnection();
+
+            var query = $"SELECT * FROM {nameof(Album)} WHERE Name = @Name LIMIT 1";
+
+            var command = db.CreateCommand(query);
+
+            command.Bind("@Name", name);
+
+            var album = command.ExecuteQuery<Album>();
+
+            db.Close();
+
+            return album.Count < 1 ? null : album[0];
+        }
+
+        /// <summary>
+        /// Ids of the images currently in an album.
+        /// </summary>
+        public IReadOnlyCollection<int> GetAlbumImageIds(int albumId)
+        {
+            using var db = OpenConnection();
+
+            var query = $"SELECT ImageId FROM {nameof(AlbumImage)} WHERE AlbumId = @AlbumId";
+
+            var command = db.CreateCommand(query);
+
+            command.Bind("@AlbumId", albumId);
+
+            var ids = command.ExecuteQueryScalars<int>().ToList();
+
+            db.Close();
+
+            return ids;
+        }
+
         //public Album GetAlbumByName(string name)
         //{
         //    using var db = OpenConnection();

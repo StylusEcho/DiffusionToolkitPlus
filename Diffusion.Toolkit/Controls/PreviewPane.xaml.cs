@@ -161,12 +161,6 @@ namespace Diffusion.Toolkit.Controls
             set => SetValue(VolumeProperty, value);
         }
 
-        public bool ShowVolume
-        {
-            get;
-            set => SetField(ref field, value);
-        }
-
         public ICommand CopyPathCommand { get; set; }
 
 
@@ -628,12 +622,6 @@ namespace Diffusion.Toolkit.Controls
             return true;
         }
 
-        private void Volume_Click(object sender, RoutedEventArgs e)
-        {
-            ShowVolume = !ShowVolume;
-            e.Handled = true;
-        }
-
         private bool isPlaying = true;
         private bool isEnded = false;
         private bool _userMuted;
@@ -642,11 +630,6 @@ namespace Diffusion.Toolkit.Controls
         {
             TogglePlayPause();
             e.Handled = true;
-        }
-
-        private void Loop_Click(object sender, RoutedEventArgs e)
-        {
-            MainModel.Settings.LoopVideo = !MainModel.Settings.LoopVideo;
         }
 
         public void Pause()

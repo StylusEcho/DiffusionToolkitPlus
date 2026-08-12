@@ -42,6 +42,22 @@ namespace Diffusion.Toolkit
             UpdateControlBarMaxWidth();
         }
 
+        /// <summary>
+        /// Space belongs to playback, always. Without this the key would be swallowed by whichever
+        /// button in the control bar happens to have focus and "press" it instead.
+        /// </summary>
+        protected override void OnPreviewKeyDown(KeyEventArgs e)
+        {
+            if (e.Key == Key.Space)
+            {
+                SpaceBarAction();
+                e.Handled = true;
+                return;
+            }
+
+            base.OnPreviewKeyDown(e);
+        }
+
         public PreviewWindow()
         {
             _model = new PreviewModel();
@@ -70,7 +86,7 @@ namespace Diffusion.Toolkit
 
             //_slideShowDelay = mainModel.Settings.SlideShowDelay;
             _model.ToggleFullScreen = new RelayCommand<object>((o) => ToggleFullScreen());
-            _model.StartStopSlideShow = new RelayCommand<object>((o) => SpaceBarAction());
+            _model.StartStopSlideShow = new RelayCommand<object>((o) => StartStopSlideShow());
             _model.OpenWithCommand = new AsyncCommand<string>((o) => OpenWith(this, o));
 
             _model.TogglePlayPauseCommand = new RelayCommand<object>((o) => TogglePlayPause());
@@ -236,8 +252,14 @@ namespace Diffusion.Toolkit
         /// Reveals the bottom control bar when the pointer nears the bottom of the window, and
         /// optionally the info overlay when it reaches the right edge.
         /// </summary>
-        private void Window_OnMouseMove(object sender, MouseEventArgs e)
+        /// <remarks>
+        /// This has to tunnel from the window. The preview pane's scroll dragger listens on
+        /// PreviewMouseMove over the image, so a bubbling handler further up never sees the move.
+        /// </remarks>
+        protected override void OnPreviewMouseMove(MouseEventArgs e)
         {
+            base.OnPreviewMouseMove(e);
+
             var position = e.GetPosition(this);
 
             if (PreviewPane.HasPlayer && position.Y >= ActualHeight - BottomHoverZone)
@@ -247,9 +269,12 @@ namespace Diffusion.Toolkit
 
             var settings = ServiceLocator.ExtendedSettings;
 
+            // A very narrow strip is near impossible to land on, so enforce a usable minimum
+            var edgeWidth = Math.Max(16, settings.InfoOverlayEdgeWidth);
+
             if (settings.InfoOverlayOnRightEdge
                 && _model.CurrentImage != null
-                && position.X >= ActualWidth - Math.Max(1, settings.InfoOverlayEdgeWidth))
+                && position.X >= ActualWidth - edgeWidth)
             {
                 _model.CurrentImage.IsParametersVisible = true;
             }
