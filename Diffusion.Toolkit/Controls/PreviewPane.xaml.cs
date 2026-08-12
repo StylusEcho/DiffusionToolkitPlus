@@ -280,6 +280,14 @@ namespace Diffusion.Toolkit.Controls
 
         public void ResetZoom()
         {
+            // Reset means back to actual size in the viewer, but back to the fit in the docked pane,
+            // which has no other resting state
+            if (!IsPopout)
+            {
+                ApplyViewScale();
+                return;
+            }
+
             if (Image is { Image: { }, Type: ImageType.Image })
             {
                 Preview?.LayoutTransform = new ScaleTransform(1, 1);
@@ -294,6 +302,9 @@ namespace Diffusion.Toolkit.Controls
         private void Zoom(MouseWheelEventArgs e)
         {
             if (Image.Type == ImageType.Video) return;
+
+            // The docked pane always fits, so there is no zoom level to move away from
+            if (!IsPopout) return;
 
             Point mouseAtImage = e.GetPosition(Preview); // ScrollViewer_CanvasMain.TranslatePoint(middleOfScrollViewer, Canvas_Main);
             Point mouseAtScrollViewer = e.GetPosition(ScrollViewer);
@@ -332,10 +343,17 @@ namespace Diffusion.Toolkit.Controls
             {
                 if (scrollNavigation)
                 {
-                    ServiceLocator.MainModel.FitToPreview = false;
-                    ServiceLocator.MainModel.ActualSize = false;
+                    // Zooming is a viewer-only gesture. In the docked pane it would both break the
+                    // fit and, because these two flags now govern the viewer alone, silently switch
+                    // the viewer out of Fit to Preview from the other side of the app.
+                    if (IsPopout)
+                    {
+                        ServiceLocator.MainModel.FitToPreview = false;
+                        ServiceLocator.MainModel.ActualSize = false;
 
-                    Zoom(e);
+                        Zoom(e);
+                    }
+
                     e.Handled = true;
                 }
             }
@@ -372,6 +390,9 @@ namespace Diffusion.Toolkit.Controls
         public void ZoomPreview(double zoomDelta)
         {
             if (Image.Type == ImageType.Video) return;
+
+            // The docked pane always fits, so +/- do nothing there
+            if (!IsPopout) return;
 
             var mouseAtScrollViewer = new Point(ScrollViewer.ViewportWidth / 2, ScrollViewer.ViewportHeight / 2);
             Point mouseAtImage = ScrollViewer.TranslatePoint(mouseAtScrollViewer, Preview);
@@ -615,6 +636,11 @@ namespace Diffusion.Toolkit.Controls
             Preview = FindVisualChildren<System.Windows.Controls.Image>(ScrollViewer).First();
 
             _scrollDragger = new ScrollDragger(Preview, ScrollViewer, handCursor, grabCursor);
+
+            // The image the scale applies to has only just been found. ResetView may have run
+            // before this against the previous one - or against none at all, coming from a video -
+            // so the scale has to be applied again now there is something to apply it to.
+            ApplyViewScale();
 
             SetFocus();
         }
