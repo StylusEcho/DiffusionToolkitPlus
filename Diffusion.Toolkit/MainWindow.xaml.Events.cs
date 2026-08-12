@@ -187,8 +187,15 @@ namespace Diffusion.Toolkit
             _model.Settings.ShowTags = _model.ShowTags;
         }
 
+        /// <summary>
+        /// The info overlay belongs to the full screen viewer only. This command is reachable from
+        /// the main window's "I" key binding and the View menu, so it does nothing unless the
+        /// viewer is actually open - the docked preview pane has its own toggle button.
+        /// </summary>
         private void ToggleInfo()
         {
+            if (!_model.IsPreviewOpen) return;
+
             _search.ToggleInfo();
         }
 
@@ -261,6 +268,11 @@ namespace Diffusion.Toolkit
                 if (_settings.IsDirty())
                 {
                     _configuration.Save(_settings);
+                }
+
+                if (ServiceLocator.ExtendedSettings.IsDirty())
+                {
+                    ServiceLocator.ExtendedSettingsService.Save();
                 }
 
                 if (ServiceLocator.MainModel.IsBusy)

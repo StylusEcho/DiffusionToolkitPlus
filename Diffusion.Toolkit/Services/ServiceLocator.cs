@@ -25,6 +25,17 @@ public class ServiceLocator
 
     public static DataStore? DataStore => _dataStore;
     public static Settings? Settings => _settings;
+
+    public static ExtendedSettingsService ExtendedSettingsService
+    {
+        get { return field ??= new ExtendedSettingsService(); }
+    }
+
+    /// <summary>
+    /// Settings that only exist in this build, stored in a sidecar file rather than config.json.
+    /// </summary>
+    public static ExtendedSettings ExtendedSettings => ExtendedSettingsService.Settings;
+
     public static ToastService ToastService { get; set; }
     public static Dispatcher Dispatcher { get; set; }
     public static NodePropertyCache NodePropertyCache { get; set; }

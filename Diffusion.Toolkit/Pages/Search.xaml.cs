@@ -13,6 +13,7 @@ using Diffusion.Toolkit.Models;
 using Diffusion.Toolkit.Services;
 using Diffusion.Video;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -273,6 +274,7 @@ namespace Diffusion.Toolkit.Pages
             });
 
             _model.CurrentImage.ToggleParameters = new RelayCommand<object>((o) => ToggleInfo());
+            _model.CurrentImage.ToggleSideParameters = new RelayCommand<object>((o) => ToggleSideInfo());
             _model.CopyFiles = new RelayCommand<object>((o) => CopyFiles(ThumbnailListView.SelectedImages));
 
             ThumbnailListView.CopyFiles = CopyFiles;
@@ -577,6 +579,9 @@ namespace Diffusion.Toolkit.Pages
                 Update(arguments.Id);
                 AdvanceOnTag();
             };
+
+            // Which video fields are shown is a setting, so rebuild the view model when it changes
+            ServiceLocator.ExtendedSettings.VideoMetadata.PropertyChanged += (sender, args) => RefreshVideoInfo();
 
 
             FilterPopup.Closed += (sender, args) =>
@@ -1032,6 +1037,7 @@ namespace Diffusion.Toolkit.Pages
                 {
                     var emptyModel = new ImageViewModel();
                     emptyModel.ToggleParameters = new RelayCommand<object>((o) => ToggleInfo());
+                    emptyModel.ToggleSideParameters = new RelayCommand<object>((o) => ToggleSideInfo());
                     emptyModel.Path = path;
                     //emptyModel.IsMessageVisible = true;
                     //emptyModel.Message = GetLocalizedText("Search.LoadPreview.MediaUnavailable");
@@ -1054,6 +1060,7 @@ namespace Diffusion.Toolkit.Pages
                 {
                     var emptyModel = new ImageViewModel();
                     emptyModel.ToggleParameters = new RelayCommand<object>((o) => ToggleInfo());
+                    emptyModel.ToggleSideParameters = new RelayCommand<object>((o) => ToggleSideInfo());
                     emptyModel.Path = path;
                     emptyModel.IsMessageVisible = true;
                     emptyModel.Message = GetLocalizedText("Search.LoadPreview.MediaUnavailable");
@@ -1068,10 +1075,13 @@ namespace Diffusion.Toolkit.Pages
                 var parameters = Metadata.ReadFromFile(path, new ComfyUIParser(ServiceLocator.NodePropertyCache));
 
                 var old = _model.CurrentImage.IsParametersVisible;
+                var oldSide = _model.CurrentImage.IsSideParametersVisible;
 
                 var imageViewModel = new ImageViewModel();
                 imageViewModel.IsParametersVisible = old;
+                imageViewModel.IsSideParametersVisible = oldSide;
                 imageViewModel.ToggleParameters = new RelayCommand<object>((o) => ToggleInfo());
+                imageViewModel.ToggleSideParameters = new RelayCommand<object>((o) => ToggleSideInfo());
                 imageViewModel.OpenAlbumCommand = new RelayCommand<Album>((o) =>
                 {
                     var albumModel = ServiceLocator.MainModel.Albums.First(d => d.Id == o.Id);
@@ -1183,6 +1193,8 @@ namespace Diffusion.Toolkit.Pages
                 }
 
                 _model.CurrentImage = imageViewModel;
+
+                LoadVideoInfo(imageViewModel, path);
 
                 if (updateViewed)
                 {
@@ -1330,7 +1342,7 @@ namespace Diffusion.Toolkit.Pages
                         Id = folder.Id,
                         Path = folder.Path,
                         FileName = Path.GetFileName(folder.Path),
-                        Name = folder.Path,
+                        Name = ServiceLocator.FolderService.GetRootFolderName(folder.Path),
                         EntryType = EntryType.RootFolder,
                         IsRecursive = folder.Recursive,
                         IsWatched = folder.Watched,
@@ -1732,9 +1744,80 @@ namespace Diffusion.Toolkit.Pages
             _modelLookup = modelsCollection;
         }
 
+        private readonly ConcurrentDictionary<string, VideoInfo> _videoInfoCache = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Reads a video's technical details off the UI thread and hands them to the view model.
+        /// Deliberately not stored in the database - the schema has to stay exactly what the
+        /// original Diffusion Toolkit expects.
+        /// </summary>
+        private void LoadVideoInfo(ImageViewModel imageViewModel, string path)
+        {
+            if (imageViewModel.Type != ImageType.Video) return;
+
+            if (_videoInfoCache.TryGetValue(path, out var cached))
+            {
+                imageViewModel.VideoInfo = new VideoInfoViewModel(cached);
+                return;
+            }
+
+            Task.Run(() =>
+            {
+                VideoInfo info;
+
+                try
+                {
+                    info = VideoInfoReader.Read(path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"Failed to read video info for {path}: {e.Message}");
+                    return;
+                }
+
+                _videoInfoCache[path] = info;
+
+                Dispatcher.Invoke(() =>
+                {
+                    // The user may have moved on while we were reading
+                    if (!ReferenceEquals(_model.CurrentImage, imageViewModel)) return;
+
+                    imageViewModel.VideoInfo = new VideoInfoViewModel(info);
+                });
+            });
+        }
+
+        /// <summary>
+        /// Rebuilds the current video's view model so the pane picks up changed field toggles.
+        /// </summary>
+        private void RefreshVideoInfo()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                var current = _model.CurrentImage;
+
+                if (current is not { Type: ImageType.Video }) return;
+                if (current.Path == null || !_videoInfoCache.TryGetValue(current.Path, out var info)) return;
+
+                current.VideoInfo = new VideoInfoViewModel(info);
+            });
+        }
+
+        /// <summary>
+        /// Toggles the full screen viewer's info overlay. The docked pane has its own toggle -
+        /// see <see cref="ToggleSideInfo"/> - so the two don't move together.
+        /// </summary>
         public void ToggleInfo()
         {
             _model.CurrentImage.IsParametersVisible = !_model.CurrentImage.IsParametersVisible;
+        }
+
+        /// <summary>
+        /// Toggles the docked preview pane's info overlay.
+        /// </summary>
+        public void ToggleSideInfo()
+        {
+            _model.CurrentImage.IsSideParametersVisible = !_model.CurrentImage.IsSideParametersVisible;
         }
 
         public void SetThumbnailSize(int thumbnailSize)

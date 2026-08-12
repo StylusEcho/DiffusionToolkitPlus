@@ -18,6 +18,9 @@
         d:DataContext="{d:DesignInstance local:PreviewModel, IsDesignTimeCreatable=True}"
         BorderThickness="0"
         Height="450" Width="800">
+    <Window.Resources>
+        <converters:BoolToVisibilityCollapsedConverter x:Key="boolToVisCol"></converters:BoolToVisibilityCollapsedConverter>
+    </Window.Resources>
     <Window.Style >
         <Style TargetType="{x:Type local:BorderlessWindow}" BasedOn="{StaticResource BorderlessWindowStyle}">
             <Setter Property="TitleVisibility" Value="Hidden"/>
@@ -51,9 +54,9 @@
         <KeyBinding Modifiers="Shift" Key="D9" Command="{Binding OpenWithCommand}" CommandParameter="9"></KeyBinding>
         <KeyBinding Modifiers="Shift" Key="D0" Command="{Binding OpenWithCommand}" CommandParameter="10"></KeyBinding>
     </Window.InputBindings>
-    <Grid Name="BackgroundGrid" Margin="-2">
+    <Grid Name="BackgroundGrid" Margin="-2" MouseMove="Window_OnMouseMove">
 
-        <controls:PreviewPane 
+        <controls:PreviewPane
             NSFWBlur="{Binding NSFWBlur}" 
             Image="{Binding CurrentImage}"
             IsLoading="{Binding CurrentImage.IsLoading}"
@@ -123,7 +126,8 @@
                         </Style>
                     </Grid.Style>
 
-                    <controls:MetadataPanel Margin="10,30,10,60" Background="#70000000" CurrentImage="{Binding CurrentImage}">
+                    <controls:MetadataPanel Margin="10,30,10,60" Background="#70000000" CurrentImage="{Binding CurrentImage}"
+                                            MouseLeave="InfoOverlay_OnMouseLeave">
                     </controls:MetadataPanel>
 
                 </Grid>
@@ -272,6 +276,137 @@
                         </Style>
                     </Grid.Style>
                 </Grid>
+            </Grid>
+
+            <!-- Video control bar. Slides up from the bottom edge, mirroring the top bar above. -->
+            <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                  Background="Transparent"
+                  IsHitTestVisible="True"
+                  VerticalAlignment="Bottom"
+                  Height="72"
+                  Visibility="{Binding IsVideo, Converter={StaticResource boolToVisCol}}"
+                  MouseEnter="BottomBar_OnMouseEnter"
+                  MouseLeave="BottomBar_OnMouseLeave">
+
+                <Border Background="#B0000000"
+                        CornerRadius="6"
+                        Margin="20,10,20,14"
+                        Padding="12,0"
+                        VerticalAlignment="Stretch"
+                        HorizontalAlignment="Stretch"
+                        MaxWidth="{Binding ControlBarMaxWidth}">
+                    <Grid Background="{x:Null}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40"/>
+                            <ColumnDefinition Width="40"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Play / pause -->
+                        <Button Grid.Column="0" Style="{DynamicResource BorderlessButton}"
+                                Background="Transparent" BorderThickness="0"
+                                ToolTip="{lex:Loc Preview.Controls.PlayPause}"
+                                Command="{Binding TogglePlayPauseCommand}">
+                            <fa:ImageAwesome Width="18" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <fa:ImageAwesome.Style>
+                                    <Style TargetType="fa:ImageAwesome">
+                                        <Setter Property="Icon" Value="Play"></Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsPlaying}" Value="{StaticResource TrueValue}">
+                                                <Setter Property="Icon" Value="Pause"></Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </fa:ImageAwesome.Style>
+                            </fa:ImageAwesome>
+                        </Button>
+
+                        <!-- Loop -->
+                        <Button Grid.Column="1" Style="{DynamicResource BorderlessButton}"
+                                Background="Transparent" BorderThickness="0"
+                                ToolTip="{lex:Loc Preview.Controls.Loop}"
+                                Command="{Binding ToggleLoopCommand}">
+                            <fa:ImageAwesome Icon="Repeat" Width="18" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <fa:ImageAwesome.Style>
+                                    <Style TargetType="fa:ImageAwesome">
+                                        <Setter Property="Opacity" Value="0.35"></Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding MainModel.Settings.LoopVideo}" Value="{StaticResource TrueValue}">
+                                                <Setter Property="Opacity" Value="1.0"></Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </fa:ImageAwesome.Style>
+                            </fa:ImageAwesome>
+                        </Button>
+
+                        <!-- Seek -->
+                        <Slider Grid.Column="2" VerticalAlignment="Center" Margin="10,0"
+                                Minimum="0"
+                                Maximum="{Binding DurationSeconds}"
+                                Value="{Binding PositionSeconds, Mode=TwoWay}"
+                                IsMoveToPointEnabled="True"
+                                Thumb.DragStarted="Seek_OnDragStarted"
+                                Thumb.DragCompleted="Seek_OnDragCompleted"/>
+
+                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Margin="4,0,10,0"
+                                   Foreground="White" FontSize="13">
+                            <Run Text="{Binding PositionText, Mode=OneWay}"/><Run Text=" / "/><Run Text="{Binding DurationText, Mode=OneWay}"/>
+                        </TextBlock>
+
+                        <!-- Mute -->
+                        <Button Grid.Column="4" Style="{DynamicResource BorderlessButton}"
+                                Background="Transparent" BorderThickness="0"
+                                ToolTip="{lex:Loc Preview.Controls.Mute}"
+                                Command="{Binding ToggleMuteCommand}">
+                            <fa:ImageAwesome Width="18" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <fa:ImageAwesome.Style>
+                                    <Style TargetType="fa:ImageAwesome">
+                                        <Setter Property="Icon" Value="VolumeUp"></Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsMuted}" Value="{StaticResource TrueValue}">
+                                                <Setter Property="Icon" Value="VolumeOff"></Setter>
+                                                <Setter Property="Opacity" Value="0.5"></Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </fa:ImageAwesome.Style>
+                            </fa:ImageAwesome>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <Grid.RenderTransform>
+                    <TranslateTransform Y="80"></TranslateTransform>
+                </Grid.RenderTransform>
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsBottomHover}" Value="True">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                             From="80" To="0"
+                                                             Duration="0:0:0.1" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                             From="0" To="80"
+                                                             Duration="0:0:0.1" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.ExitActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
             </Grid>
         </Grid>
 

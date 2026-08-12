@@ -271,7 +271,28 @@
             </TabItem>
             <TabItem Header="{lex:Loc Settings.Video}">
                 <StackPanel Width="800" HorizontalAlignment="Left" Margin="10">
+                    <!-- LoopVideo lives in config.json and is shared with the original app -->
                     <CheckBox IsChecked="{Binding LoopVideo}" Margin="0,10,0,0" Content="{lex:Loc Settings.Video.LoopVideo}"></CheckBox>
+
+                    <!-- The rest are fork-only and are saved to the sidecar file, not config.json -->
+                    <CheckBox IsChecked="{Binding ExtendedSettings.MuteSidePanelVideo, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
+                              Margin="0,10,0,0" Content="{lex:Loc Settings.Video.MuteSidePanel}"></CheckBox>
+                    <CheckBox IsChecked="{Binding ExtendedSettings.InfoOverlayOnRightEdge, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
+                              Margin="0,10,0,0" Content="{lex:Loc Settings.Video.InfoOverlayOnRightEdge}"></CheckBox>
+
+                    <TextBlock Foreground="{DynamicResource ForegroundBrush}" Margin="0,20,0,0" Text="{lex:Loc Settings.Video.MetadataFields}"></TextBlock>
+
+                    <StackPanel Margin="10,0,0,0"
+                                DataContext="{Binding ExtendedSettings.VideoMetadata, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}">
+                        <CheckBox IsChecked="{Binding ShowResolution}" Margin="0,10,0,0" Content="{lex:Loc Metadata.Video.Resolution}"></CheckBox>
+                        <CheckBox IsChecked="{Binding ShowLength}" Margin="0,6,0,0" Content="{lex:Loc Metadata.Video.Length}"></CheckBox>
+                        <CheckBox IsChecked="{Binding ShowFrameRate}" Margin="0,6,0,0" Content="{lex:Loc Metadata.Video.FrameRate}"></CheckBox>
+                        <CheckBox IsChecked="{Binding ShowContainer}" Margin="0,6,0,0" Content="{lex:Loc Metadata.Video.Container}"></CheckBox>
+                        <CheckBox IsChecked="{Binding ShowVideoCodec}" Margin="0,6,0,0" Content="{lex:Loc Metadata.Video.VideoCodec}"></CheckBox>
+                        <CheckBox IsChecked="{Binding ShowVideoBitrate}" Margin="0,6,0,0" Content="{lex:Loc Metadata.Video.VideoBitrate}"></CheckBox>
+                        <CheckBox IsChecked="{Binding ShowAudioFormat}" Margin="0,6,0,0" Content="{lex:Loc Metadata.Video.AudioFormat}"></CheckBox>
+                        <CheckBox IsChecked="{Binding ShowAudioBitrate}" Margin="0,6,0,0" Content="{lex:Loc Metadata.Video.AudioBitrate}"></CheckBox>
+                    </StackPanel>
                 </StackPanel>
             </TabItem>
             <TabItem Header="{lex:Loc Settings.Metadata}">

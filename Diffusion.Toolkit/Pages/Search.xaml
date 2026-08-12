@@ -356,10 +356,16 @@
                                                                     <!--<MenuItem IsEnabled="{Binding NavigationSection.Folders.CanDelete}" Header="Add to Album"></MenuItem>-->
                                                                     <!--<MenuItem IsEnabled="{Binding NavigationSection.Folders.CanDelete}" Header="Send to Recycle Bin"></MenuItem>-->
 
-                                                                    <MenuItem Command="{Binding Source={StaticResource Proxy}, Path=Data.RenameFolderCommand}" 
+                                                                    <MenuItem Command="{Binding Source={StaticResource Proxy}, Path=Data.RenameFolderCommand}"
                                                                           CommandParameter="{Binding .}"
-                                                                          IsEnabled="{Binding Source={StaticResource SearchProxy}, Path=Data.NavigationSection.FoldersSection.CanRename}" 
+                                                                          IsEnabled="{Binding Source={StaticResource SearchProxy}, Path=Data.NavigationSection.FoldersSection.CanRename}"
                                                                           Header="{lex:Loc Search.Navigation.Folders.ContextMenu.Rename}"></MenuItem>
+
+                                                                    <!-- Display name only, root folders. Doesn't touch the folder on disk. -->
+                                                                    <MenuItem Command="{Binding Source={StaticResource Proxy}, Path=Data.RenameFolderDisplayNameCommand}"
+                                                                          CommandParameter="{Binding .}"
+                                                                          Visibility="{Binding IsRoot, Converter={StaticResource boolToVisCol}}"
+                                                                          Header="{lex:Loc Search.Navigation.Folders.ContextMenu.RenameDisplayName}"></MenuItem>
 
                                                                     <MenuItem Command="{Binding Source={StaticResource Proxy}, Path=Data.RemoveFolderCommand}" 
                                                                               CommandParameter="{Binding .}"
@@ -1017,7 +1023,7 @@
                     <RowDefinition Height="50"/>
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="1" Background="#A0000000" Margin="10" Visibility="{Binding CurrentImage.IsParametersVisible, Converter={StaticResource boolToVis}}">
+                <Grid Grid.Row="1" Background="#A0000000" Margin="10" Visibility="{Binding CurrentImage.IsSideParametersVisible, Converter={StaticResource boolToVis}}">
                     <controls:MetadataPanel CurrentImage="{Binding CurrentImage}" MetadataSection="{Binding MetadataSection}">
                     </controls:MetadataPanel>
                 </Grid>

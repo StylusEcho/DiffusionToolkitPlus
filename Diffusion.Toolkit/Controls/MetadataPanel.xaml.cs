@@ -59,6 +59,13 @@ namespace Diffusion.Toolkit.Controls
             set => SetValue(MetadataSectionProperty, value);
         }
 
+        /// <summary>
+        /// Fork-only settings, exposed so the video section can bind its state and field toggles.
+        /// Not a DependencyProperty because it is a process wide singleton rather than something
+        /// a host hands in.
+        /// </summary>
+        public ExtendedSettings ExtendedSettings => ServiceLocator.ExtendedSettings;
+
         public MetadataPanel()
         {
             InitializeComponent();
