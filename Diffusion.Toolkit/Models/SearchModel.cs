@@ -298,6 +298,16 @@ public class SearchModel : BaseNotify
         set => SetField(ref field, value);
     }
 
+    /// <summary>
+    /// Toggles one media type in the filter. Takes the <see cref="Diffusion.Common.ImageType"/> name
+    /// as its parameter, so the toolbar buttons stay independent of each other.
+    /// </summary>
+    public ICommand ToggleTypeFilterCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
     public ICommand ClearCommand
     {
         get;

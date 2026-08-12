@@ -450,7 +450,13 @@
 
         <Grid Grid.Row="1">
             <DockPanel>
-                <Grid Margin="0,5,10,0">
+                <!-- The view bar is the first thing the pointer crosses on its way to the left edge,
+                     so it doubles as the reveal zone for an auto-hidden navigation pane -->
+                <Grid Margin="0,5,10,0" Background="Transparent" MouseMove="ViewBar_OnMouseMove">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
                     <StackPanel Orientation="Vertical">
                         <Button Margin="0,5,0,10" Height="16" Width="24" 
                                 behaviors:DTBehaviors.IsSelected="{Binding ActiveView, Converter={StaticResource StringMatchConverter}, ConverterParameter=Folders}"
@@ -504,6 +510,28 @@
                             </fa:ImageAwesome>
                         </Button>
                     </StackPanel>
+
+                    <!-- Auto-hide the navigation pane. Sits at the foot of the bar, away from the
+                         view icons it would otherwise be mistaken for -->
+                    <Button Grid.Row="1" VerticalAlignment="Bottom" Margin="0,10,0,10" Height="16" Width="24"
+                            Style="{StaticResource BorderlessToolbarButton}"
+                            Command="{Binding ToggleNavigationAutoHideCommand}">
+                        <fa:ImageAwesome Icon="Columns" Width="16" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                         ToolTip="{lex:Loc Search.Navigation.Buttons.AutoHide.ToolTip}">
+                            <fa:ImageAwesome.Style>
+                                <Style TargetType="fa:ImageAwesome">
+                                    <Setter Property="Opacity" Value="0.4"></Setter>
+                                    <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"></Setter>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsNavigationAutoHideEnabled}" Value="True">
+                                            <Setter Property="Opacity" Value="1.0"></Setter>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"></Setter>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </fa:ImageAwesome.Style>
+                        </fa:ImageAwesome>
+                    </Button>
                 </Grid>
                 <Frame x:Name="Frame" Content="{Binding Page}" NavigationUIVisibility="Hidden"></Frame>
             </DockPanel>
