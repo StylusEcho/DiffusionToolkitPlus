@@ -118,7 +118,7 @@ namespace Diffusion.Toolkit
 
                 _model.ReloadHashes = new AsyncCommand<object>(async (o) =>
                 {
-                    LoadModels();
+                    await LoadModels();
                     await _messagePopupManager.Show("Models have been reloaded", "Diffusion Toolkit", PopupButtons.OK);
                 });
 
@@ -820,18 +820,33 @@ namespace Diffusion.Toolkit
             };
 
 
-            ServiceLocator.FolderService.CreateWatchers();
-
             //_navigatorService.Goto("search");
 
             Logger.Log($"Loading models");
 
-            LoadAlbums();
-            LoadQueries();
-            LoadModels();
-            LoadImageModels();
-            LoadTags();
+            _model.Status = GetLocalizedText("Main.Status.Loading");
+
+            // Albums, queries, tags and the model list are independent of each other and are
+            // all loaded off the UI thread, so start them together and let them overlap
+            // instead of blocking the window one after the other.
+            var albumsTask = LoadAlbums();
+            var queriesTask = LoadQueries();
+            var tagsTask = LoadTags();
+            var modelsTask = LoadModels();
+
+            await Task.WhenAll(albumsTask, queriesTask, tagsTask, modelsTask);
+
+            // Image model names are resolved against the models loaded above, so this has to
+            // come after them.
+            await LoadImageModels();
+
             await InitFolders();
+
+            // The watchers need the root folder list, and creating them hits the filesystem,
+            // which can stall on a disconnected network share
+            await Task.Run(() => ServiceLocator.FolderService.CreateWatchers());
+
+            _model.Status = string.Empty;
 
             ServiceLocator.ContextMenuService.Go();
 
@@ -1044,119 +1059,141 @@ namespace Diffusion.Toolkit
         private ICollection<Model> _modelsCollection;
         private Prompts _prompts;
 
-        private void LoadModels()
+        private async Task LoadModels()
         {
-            if (!string.IsNullOrEmpty(_settings.ModelRootPath) && Directory.Exists(_settings.ModelRootPath))
-            {
-                _modelsCollection = ModelScanner.Scan(_settings.ModelRootPath).ToList();
-            }
-            else
-            {
-                _modelsCollection = new List<Model>();
-            }
+            var modelRootPath = _settings.ModelRootPath;
+            var hashCache = _settings.HashCache;
 
-            if (!string.IsNullOrEmpty(_settings.HashCache))
+            // Scanning the model folder opens and hashes every checkpoint it finds, and the
+            // hash cache / Civitai model list can be large. Keep all of it off the UI thread,
+            // otherwise the window is frozen for the whole scan on startup.
+            var (modelsCollection, allModels, hashCacheError) = await Task.Run(() =>
             {
-                try
+                ICollection<Model> models;
+
+                if (!string.IsNullOrEmpty(modelRootPath) && Directory.Exists(modelRootPath))
                 {
-                    string text = File.ReadAllText(_settings.HashCache);
+                    models = ModelScanner.Scan(modelRootPath).ToList();
+                }
+                else
+                {
+                    models = new List<Model>();
+                }
 
-                    // Fix unquoted "NaN" strings, which sometimes show up in SafeTensor metadata.
-                    text = text.Replace("NaN", "null");
+                string? error = null;
 
-                    var hashes = JsonSerializer.Deserialize<Hashes>(text);
-                    var modelLookup = _modelsCollection.ToDictionary(m => m.Path);
-
-                    var index = "checkpoint/".Length;
-
-                    foreach (var hash in hashes.hashes)
+                if (!string.IsNullOrEmpty(hashCache))
+                {
+                    try
                     {
-                        if (index < hash.Key.Length)
+                        string text = File.ReadAllText(hashCache);
+
+                        // Fix unquoted "NaN" strings, which sometimes show up in SafeTensor metadata.
+                        text = text.Replace("NaN", "null");
+
+                        var hashes = JsonSerializer.Deserialize<Hashes>(text);
+                        var modelLookup = models.ToDictionary(m => m.Path);
+
+                        var index = "checkpoint/".Length;
+
+                        foreach (var hash in hashes.hashes)
                         {
-                            var path = hash.Key.Substring(index);
+                            if (index < hash.Key.Length)
+                            {
+                                var path = hash.Key.Substring(index);
 
-                            if (modelLookup.TryGetValue(path, out var model))
-                            {
-                                model.SHA256 = hash.Value.sha256;
-                            }
-                            else
-                            {
-                                _modelsCollection.Add(new Model()
+                                if (modelLookup.TryGetValue(path, out var model))
                                 {
-                                    Filename = Path.GetFileNameWithoutExtension(path),
-                                    Path = path,
-                                    SHA256 = hash.Value.sha256,
-                                    IsLocal = true
-                                });
+                                    model.SHA256 = hash.Value.sha256;
+                                }
+                                else
+                                {
+                                    models.Add(new Model()
+                                    {
+                                        Filename = Path.GetFileNameWithoutExtension(path),
+                                        Path = path,
+                                        SHA256 = hash.Value.sha256,
+                                        IsLocal = true
+                                    });
 
+                                }
                             }
                         }
                     }
-                }
-                catch (Exception e)
-                {
-                    MessageBox.Show($"Error loading JSON file '{_settings.HashCache}':\n{e.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-
-                //foreach (var model in _modelsCollection.ToList())
-                //{
-                //    if (hashes.hashes.TryGetValue("checkpoint/" + model.Path, out var hash))
-                //    {
-                //        model.SHA256 = hash.sha256;
-                //    }
-                //}
-            }
-
-            var otherModels = new List<Model>();
-
-            if (File.Exists("models.json"))
-            {
-                var json = File.ReadAllText(Path.Combine(AppDir, "models.json"));
-
-                var options = new JsonSerializerOptions()
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    Converters = { new JsonStringEnumConverter() }
-                };
-
-                try
-                {
-                    var civitAiModels = JsonSerializer.Deserialize<LiteModelCollection>(json, options);
-
-                    foreach (var model in civitAiModels.Models)
+                    catch (Exception e)
                     {
-                        foreach (var modelVersion in model.ModelVersions)
+                        error = e.Message;
+                    }
+
+                    //foreach (var model in _modelsCollection.ToList())
+                    //{
+                    //    if (hashes.hashes.TryGetValue("checkpoint/" + model.Path, out var hash))
+                    //    {
+                    //        model.SHA256 = hash.sha256;
+                    //    }
+                    //}
+                }
+
+                var otherModels = new List<Model>();
+
+                if (File.Exists("models.json"))
+                {
+                    var json = File.ReadAllText(Path.Combine(AppDir, "models.json"));
+
+                    var options = new JsonSerializerOptions()
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        Converters = { new JsonStringEnumConverter() }
+                    };
+
+                    try
+                    {
+                        var civitAiModels = JsonSerializer.Deserialize<LiteModelCollection>(json, options);
+
+                        foreach (var model in civitAiModels.Models)
                         {
-                            foreach (var versionFile in modelVersion.Files)
+                            foreach (var modelVersion in model.ModelVersions)
                             {
-                                otherModels.Add(new Model()
+                                foreach (var versionFile in modelVersion.Files)
                                 {
-                                    Filename = Path.GetFileNameWithoutExtension(versionFile.Name),
-                                    Hash = versionFile.Hashes.AutoV1,
-                                    SHA256 = versionFile.Hashes.SHA256,
-                                });
+                                    otherModels.Add(new Model()
+                                    {
+                                        Filename = Path.GetFileNameWithoutExtension(versionFile.Name),
+                                        Hash = versionFile.Hashes.AutoV1,
+                                        SHA256 = versionFile.Hashes.SHA256,
+                                    });
+                                }
                             }
+
                         }
 
                     }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(ex.Message);
+                    }
+
 
                 }
-                catch (Exception ex)
+
+                return (models, (ICollection<Model>)models.Concat(otherModels).ToList(), error);
+            });
+
+            Dispatcher.Invoke(() =>
+            {
+                _modelsCollection = modelsCollection;
+                _allModels = allModels;
+
+                if (hashCacheError != null)
                 {
-                    Logger.Log(ex.Message);
+                    MessageBox.Show($"Error loading JSON file '{hashCache}':\n{hashCacheError}", "Error", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
 
+                _search.SetModels(_allModels);
+                _models.SetModels(_modelsCollection);
 
-            }
-
-            _allModels = _modelsCollection.Concat(otherModels).ToList();
-
-
-
-            _search.SetModels(_allModels);
-            _models.SetModels(_modelsCollection);
-
-            QueryBuilder.SetModels(_allModels);
+                QueryBuilder.SetModels(_allModels);
+            });
         }
 
         private ICollection<Model> _allModels = new List<Model>();

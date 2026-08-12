@@ -216,12 +216,12 @@ namespace Diffusion.Toolkit
             });
         }
 
-        private void SortAlbums()
+        private async Task SortAlbums()
         {
             var window = new AlbumSortWindow(_dataStore, _settings);
             window.Owner = this;
             window.ShowDialog();
-            LoadAlbums();
+            await LoadAlbums();
         }
 
         private void ClearAlbums()

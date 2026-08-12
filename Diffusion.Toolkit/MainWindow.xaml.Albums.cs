@@ -145,7 +145,7 @@ namespace Diffusion.Toolkit
                         }
                     }
 
-                    LoadAlbums();
+                    await LoadAlbums();
 
                     UpdateImageAlbums();
 
@@ -173,46 +173,49 @@ namespace Diffusion.Toolkit
         }
 
 
-        private void LoadAlbums()
+        private async Task LoadAlbums()
         {
             var currentAlbums = _model.Albums is { } ? _model.Albums.ToList() : Enumerable.Empty<AlbumModel>();
 
-            var albums = _dataStore.GetAlbumsView().Select(a => new AlbumModel()
+            // Counting the images in every album is a database hit, so run it off the UI thread.
+            var albums = await Task.Run(() => _dataStore.GetAlbumsView().Select(a => new AlbumModel()
             {
                 Id = a.Id,
                 Name = a.Name,
                 LastUpdated = a.LastUpdated,
                 ImageCount = a.ImageCount,
                 Order = a.Order,
-            }).ToList();
+            }).ToList());
 
-            foreach (var album in albums)
+            Dispatcher.Invoke(() =>
             {
-                var prevAlbum = currentAlbums.FirstOrDefault(d => d.Id == album.Id);
-
-                if (prevAlbum != null)
+                foreach (var album in albums)
                 {
-                    album.IsTicked = prevAlbum.IsTicked;
+                    var prevAlbum = currentAlbums.FirstOrDefault(d => d.Id == album.Id);
+
+                    if (prevAlbum != null)
+                    {
+                        album.IsTicked = prevAlbum.IsTicked;
+                    }
+
+                    album.PropertyChanged += Album_PropertyChanged;
                 }
 
-                album.PropertyChanged += Album_PropertyChanged;
-            }
+                switch (_settings.SortAlbumsBy)
+                {
+                    case "Name":
+                        _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.Name));
+                        break;
+                    case "Date":
+                        _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.LastUpdated));
+                        break;
+                    case "Custom":
+                        _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.Order));
+                        break;
+                }
 
-            switch (_settings.SortAlbumsBy)
-            {
-                case "Name":
-                    _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.Name));
-                    break;
-                case "Date":
-                    _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.LastUpdated));
-                    break;
-                case "Custom":
-                    _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.Order));
-                    break;
-            }
-
-            ServiceLocator.AlbumService.UpdateSelectedImageAlbums();
-
+                ServiceLocator.AlbumService.UpdateSelectedImageAlbums();
+            });
         }
 
         private void Album_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -249,7 +252,7 @@ namespace Diffusion.Toolkit
 
                 ServiceLocator.ToastService.Toast(GetLocalizedText("Actions.Albums.Created.Toast").Replace("{album}", album.Name), title);
 
-                LoadAlbums();
+                await LoadAlbums();
             }
             catch (SQLiteException ex)
             {

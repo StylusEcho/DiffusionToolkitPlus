@@ -91,7 +91,7 @@ namespace Diffusion.Toolkit
             _model.ShowFilterCommand = new RelayCommand<object>((o) => _search?.ShowFilter());
             _model.ToggleAutoRefresh = new RelayCommand<object>((o) => ToggleAutoRefresh());
 
-            _model.SortAlbumCommand = new RelayCommand<object>((o) => SortAlbums());
+            _model.SortAlbumCommand = new AsyncCommand<object>((o) => SortAlbums());
             _model.ClearAlbumsCommand = new RelayCommand<object>((o) => ClearAlbums());
             _model.ClearTagsCommand = new RelayCommand<object>((o) => ClearTags());
             _model.ClearModelsCommand = new RelayCommand<object>((o) => ClearModels());
@@ -348,7 +348,7 @@ namespace Diffusion.Toolkit
 
                 case nameof(Settings.ModelRootPath):
                 case nameof(Settings.HashCache):
-                    LoadModels();
+                    _ = LoadModels();
                     break;
 
                 case nameof(Settings.Theme):

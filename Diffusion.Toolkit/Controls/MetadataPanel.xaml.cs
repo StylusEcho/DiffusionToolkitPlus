@@ -119,7 +119,7 @@ namespace Diffusion.Toolkit.Controls
                 ServiceLocator.DataStore.CreateTag(tagName);
                 AddTagText.Text = "";
                 CurrentImage.ImageTags = ServiceLocator.TagService.GetImageTagViews(CurrentImage.Id);
-                ServiceLocator.TagService.LoadTags();
+                _ = ServiceLocator.TagService.LoadTags();
                 UpdateFilter();
             }
         }

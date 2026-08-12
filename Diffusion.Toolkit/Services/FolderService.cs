@@ -271,7 +271,14 @@ namespace Diffusion.Toolkit.Services
         {
             ClearCache();
 
-            var folders = ServiceLocator.DataStore.GetFoldersView().ToList();
+            // The recursive folder query and the filesystem probes below can both be slow
+            // (large trees, network shares, disconnected drives). Resolve them off the
+            // calling thread so the UI stays responsive while folders are loaded.
+            var folders = await Task.Run(() => ServiceLocator.DataStore.GetFoldersView().ToList());
+
+            var rootFolderExists = await Task.Run(() => folders
+                .Where(d => d.IsRoot)
+                .ToDictionary(d => d.Path, d => Directory.Exists(d.Path)));
 
             _dispatcher.Invoke(() =>
                 {
@@ -288,7 +295,7 @@ namespace Diffusion.Toolkit.Services
                             IsArchived = folder.Archived,
                             IsExcluded = folder.Excluded,
                             IsRecursive = folder.Recursive,
-                            IsUnavailable = !Directory.Exists(folder.Path),
+                            IsUnavailable = !rootFolderExists[folder.Path],
                             IsScanned = true
                         }));
                     }
@@ -320,7 +327,7 @@ namespace Diffusion.Toolkit.Services
                                     Path = folder.Path,
                                     IsArchived = folder.Archived,
                                     IsExcluded = folder.Excluded,
-                                    IsUnavailable = !Directory.Exists(folder.Path),
+                                    IsUnavailable = !rootFolderExists[folder.Path],
                                     IsScanned = true
                                 });
 

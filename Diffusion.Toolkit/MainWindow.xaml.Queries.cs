@@ -54,7 +54,7 @@ namespace Diffusion.Toolkit
                 {
                     _dataStore.RemoveQuery(queryModel.Id);
 
-                    LoadQueries();
+                    await LoadQueries();
                 }
             });
 
@@ -79,15 +79,15 @@ namespace Diffusion.Toolkit
             });
         }
 
-        private void LoadQueries()
+        private async Task LoadQueries()
         {
             //var currentAlbums = _model.Queries is { } ? _model.Queries.ToList() : Enumerable.Empty<QueryModel>();
 
-            var albums = _dataStore.GetQueries().Select(a => new QueryModel()
+            var albums = await Task.Run(() => _dataStore.GetQueries().Select(a => new QueryModel()
             {
                 Id = a.Id,
                 Name = a.Name,
-            }).ToList();
+            }).ToList());
 
             //foreach (var album in albums)
             //{
@@ -100,23 +100,24 @@ namespace Diffusion.Toolkit
 
             //}
 
-            switch (_settings.SortQueriesBy)
+            Dispatcher.Invoke(() =>
             {
-                case "Name":
-                    _model.Queries = new ObservableCollection<QueryModel>(albums.OrderBy(a => a.Name));
-                    break;
-                default:
-                    _model.Queries = new ObservableCollection<QueryModel>(albums.OrderBy(a => a.Name));
-                    break;
-                    //case "Date":
-                    //    _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.LastUpdated));
-                    //    break;
-                    //case "Custom":
-                    //    _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.Order));
-                    //    break;
-            }
-
-
+                switch (_settings.SortQueriesBy)
+                {
+                    case "Name":
+                        _model.Queries = new ObservableCollection<QueryModel>(albums.OrderBy(a => a.Name));
+                        break;
+                    default:
+                        _model.Queries = new ObservableCollection<QueryModel>(albums.OrderBy(a => a.Name));
+                        break;
+                        //case "Date":
+                        //    _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.LastUpdated));
+                        //    break;
+                        //case "Custom":
+                        //    _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.Order));
+                        //    break;
+                }
+            });
         }
 
         private async Task CreateOrUpdateQuery(string name, QueryOptions queryOptions)
@@ -125,7 +126,7 @@ namespace Diffusion.Toolkit
 
             ServiceLocator.ToastService.Toast($"Query \"{name}\" created.", "New Query");
 
-            LoadQueries();
+            await LoadQueries();
         }
     }
 }

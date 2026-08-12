@@ -351,6 +351,7 @@
   "Messages.Captions.Error": "Error",
   "Messages.Errors.NoImagePaths": "No image paths configured!",
   "Main.Status.ImagesInDatabase": "{count} images in database",
+  "Main.Status.Loading": "Loading your library...",
   "Main.Update.UpdateAvailable": "An update is available. Do you want to install now?",
   "UnavailableFiles": "Scan for unavailable images",
   "UnavailableFiles.Description": "This will verify images in the selected locations. Unavailabe images will be tagged. Any previously unavailable images that are now available will be restored.",
