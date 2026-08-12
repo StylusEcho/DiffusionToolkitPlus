@@ -14,6 +14,7 @@
         <converters:SizeConverter x:Key="SizeConverter"></converters:SizeConverter>
         <converters:ZeroConverter x:Key="ZeroConverter"></converters:ZeroConverter>
         <converters:BoolToVisibilityConverter x:Key="boolToVis"></converters:BoolToVisibilityConverter>
+        <converters:BoolToVisibilityCollapsedConverter x:Key="boolToVisCol"></converters:BoolToVisibilityCollapsedConverter>
     </UserControl.Resources>
     <Grid x:Name="Root" Background="Transparent"
         DataContext="{Binding CurrentImage, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}}">
@@ -133,12 +134,79 @@
                             </Grid>
                         </local:AccordionControl>
 
-                        <local:AccordionControl x:Name="SamplerMetadata" 
+                        <local:AccordionControl x:Name="SamplerMetadata"
                                                    Margin="0,0,0,5"
                                                    State="{Binding MetadataSection.SamplerState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.Sampler}">
                             <TextBox Background="#00000000" FontSize="14" BorderThickness="0"
                                      IsReadOnly="True"
                                      Padding="5" TextWrapping="WrapWithOverflow" Text="{Binding Sampler}"/>
+                        </local:AccordionControl>
+
+                        <!-- Video details, read from the file on demand. Hidden entirely for stills,
+                             and each row hides itself when the value is unavailable or switched off. -->
+                        <local:AccordionControl x:Name="VideoMetadata"
+                                                Margin="0,0,0,5"
+                                                Visibility="{Binding VideoInfo.HasAny, Converter={StaticResource boolToVisCol}}"
+                                                State="{Binding ExtendedSettings.VideoSectionState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}"
+                                                HeaderBackground="#80000000" Header="{lex:Loc Metadata.Video}">
+                            <StackPanel Background="{x:Null}" DataContext="{Binding VideoInfo}">
+                                <StackPanel.Resources>
+                                    <!-- Matches the SmallCaps look used for the labels above -->
+                                    <Style TargetType="Label">
+                                        <Setter Property="Background" Value="Transparent"></Setter>
+                                        <Setter Property="Foreground" Value="White"></Setter>
+                                        <Setter Property="FontSize" Value="10"></Setter>
+                                        <Setter Property="Padding" Value="5,2,5,0"></Setter>
+                                    </Style>
+                                    <Style TargetType="TextBox">
+                                        <Setter Property="Background" Value="#00000000"></Setter>
+                                        <Setter Property="FontSize" Value="14"></Setter>
+                                        <Setter Property="BorderThickness" Value="0"></Setter>
+                                        <Setter Property="IsReadOnly" Value="True"></Setter>
+                                        <Setter Property="Padding" Value="5,0,5,4"></Setter>
+                                    </Style>
+                                </StackPanel.Resources>
+
+                                <StackPanel Visibility="{Binding ShowResolution, Converter={StaticResource boolToVisCol}}">
+                                    <Label Content="{lex:Loc Metadata.Video.Resolution}"/>
+                                    <TextBox Text="{Binding Resolution, Mode=OneWay}"/>
+                                </StackPanel>
+
+                                <StackPanel Visibility="{Binding ShowLength, Converter={StaticResource boolToVisCol}}">
+                                    <Label Content="{lex:Loc Metadata.Video.Length}"/>
+                                    <TextBox Text="{Binding Length, Mode=OneWay}"/>
+                                </StackPanel>
+
+                                <StackPanel Visibility="{Binding ShowFrameRate, Converter={StaticResource boolToVisCol}}">
+                                    <Label Content="{lex:Loc Metadata.Video.FrameRate}"/>
+                                    <TextBox Text="{Binding FrameRate, Mode=OneWay}"/>
+                                </StackPanel>
+
+                                <StackPanel Visibility="{Binding ShowContainer, Converter={StaticResource boolToVisCol}}">
+                                    <Label Content="{lex:Loc Metadata.Video.Container}"/>
+                                    <TextBox Text="{Binding Container, Mode=OneWay}"/>
+                                </StackPanel>
+
+                                <StackPanel Visibility="{Binding ShowVideoCodec, Converter={StaticResource boolToVisCol}}">
+                                    <Label Content="{lex:Loc Metadata.Video.VideoCodec}"/>
+                                    <TextBox Text="{Binding VideoCodec, Mode=OneWay}"/>
+                                </StackPanel>
+
+                                <StackPanel Visibility="{Binding ShowVideoBitrate, Converter={StaticResource boolToVisCol}}">
+                                    <Label Content="{lex:Loc Metadata.Video.VideoBitrate}"/>
+                                    <TextBox Text="{Binding VideoBitrate, Mode=OneWay}"/>
+                                </StackPanel>
+
+                                <StackPanel Visibility="{Binding ShowAudioFormat, Converter={StaticResource boolToVisCol}}">
+                                    <Label Content="{lex:Loc Metadata.Video.AudioFormat}"/>
+                                    <TextBox Text="{Binding AudioFormat, Mode=OneWay}"/>
+                                </StackPanel>
+
+                                <StackPanel Visibility="{Binding ShowAudioBitrate, Converter={StaticResource boolToVisCol}}">
+                                    <Label Content="{lex:Loc Metadata.Video.AudioBitrate}"/>
+                                    <TextBox Text="{Binding AudioBitrate, Mode=OneWay}"/>
+                                </StackPanel>
+                            </StackPanel>
                         </local:AccordionControl>
 
                         <local:AccordionControl x:Name="OtherMetadata" 

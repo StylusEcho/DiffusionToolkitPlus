@@ -91,7 +91,7 @@ namespace Diffusion.Toolkit
             _model.ShowFilterCommand = new RelayCommand<object>((o) => _search?.ShowFilter());
             _model.ToggleAutoRefresh = new RelayCommand<object>((o) => ToggleAutoRefresh());
 
-            _model.SortAlbumCommand = new RelayCommand<object>((o) => SortAlbums());
+            _model.SortAlbumCommand = new AsyncCommand<object>((o) => SortAlbums());
             _model.ClearAlbumsCommand = new RelayCommand<object>((o) => ClearAlbums());
             _model.ClearTagsCommand = new RelayCommand<object>((o) => ClearTags());
             _model.ClearModelsCommand = new RelayCommand<object>((o) => ClearModels());
@@ -187,8 +187,15 @@ namespace Diffusion.Toolkit
             _model.Settings.ShowTags = _model.ShowTags;
         }
 
+        /// <summary>
+        /// The info overlay belongs to the full screen viewer only. This command is reachable from
+        /// the main window's "I" key binding and the View menu, so it does nothing unless the
+        /// viewer is actually open - the docked preview pane has its own toggle button.
+        /// </summary>
         private void ToggleInfo()
         {
+            if (!_model.IsPreviewOpen) return;
+
             _search.ToggleInfo();
         }
 
@@ -261,6 +268,11 @@ namespace Diffusion.Toolkit
                 if (_settings.IsDirty())
                 {
                     _configuration.Save(_settings);
+                }
+
+                if (ServiceLocator.ExtendedSettings.IsDirty())
+                {
+                    ServiceLocator.ExtendedSettingsService.Save();
                 }
 
                 if (ServiceLocator.MainModel.IsBusy)
@@ -348,7 +360,7 @@ namespace Diffusion.Toolkit
 
                 case nameof(Settings.ModelRootPath):
                 case nameof(Settings.HashCache):
-                    LoadModels();
+                    _ = LoadModels();
                     break;
 
                 case nameof(Settings.Theme):

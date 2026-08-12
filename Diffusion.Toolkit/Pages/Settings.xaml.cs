@@ -38,6 +38,12 @@ namespace Diffusion.Toolkit.Pages
 
         private DataStore _dataStore => ServiceLocator.DataStore;
 
+        /// <summary>
+        /// Fork-only settings, bound directly rather than mirrored through <see cref="SettingsModel"/>
+        /// because they are saved to a sidecar file and must never reach config.json.
+        /// </summary>
+        public ExtendedSettings ExtendedSettings => ServiceLocator.ExtendedSettings;
+
         private string GetLocalizedText(string key)
         {
             return (string)JsonLocalizationProvider.Instance.GetLocalizedObject(key, null, CultureInfo.InvariantCulture);

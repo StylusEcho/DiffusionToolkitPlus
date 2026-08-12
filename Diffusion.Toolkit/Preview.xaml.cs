@@ -8,10 +8,14 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Diffusion.Common;
 using Diffusion.Toolkit.Services;
+using Screen = System.Windows.Forms.Screen;
 
 namespace Diffusion.Toolkit
 {
@@ -33,6 +37,9 @@ namespace Diffusion.Toolkit
         {
             //PreviewPane.SetFocus();
             base.OnSourceInitialized(e);
+
+            // The window handle only exists from here on, and we need it to find the monitor
+            UpdateControlBarMaxWidth();
         }
 
         public PreviewWindow()
@@ -63,8 +70,12 @@ namespace Diffusion.Toolkit
 
             //_slideShowDelay = mainModel.Settings.SlideShowDelay;
             _model.ToggleFullScreen = new RelayCommand<object>((o) => ToggleFullScreen());
-            _model.StartStopSlideShow = new RelayCommand<object>((o) => StartStopSlideShow());
+            _model.StartStopSlideShow = new RelayCommand<object>((o) => SpaceBarAction());
             _model.OpenWithCommand = new AsyncCommand<string>((o) => OpenWith(this, o));
+
+            _model.TogglePlayPauseCommand = new RelayCommand<object>((o) => TogglePlayPause());
+            _model.ToggleLoopCommand = new RelayCommand<object>((o) => ToggleLoop());
+            _model.ToggleMuteCommand = new RelayCommand<object>((o) => ToggleMute());
 
             _model.IsTopHover = true;
 
@@ -82,10 +93,178 @@ namespace Diffusion.Toolkit
                 _model.IsTopHover = false;
             }, 2000);
 
+            _debounceCloseBottomBar = Utility.Debounce(() =>
+            {
+                _model.IsBottomHover = false;
+            }, 2000);
+
+            _debounceCloseInfoOverlay = Utility.Debounce(() =>
+            {
+                if (_model.CurrentImage != null)
+                {
+                    _model.CurrentImage.IsParametersVisible = false;
+                }
+            }, 2000);
+
+            _positionTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromMilliseconds(200)
+            };
+            _positionTimer.Tick += PositionTimerOnTick;
+
+            PreviewPane.MediaOpened += PreviewPaneOnMediaOpened;
+
+            SizeChanged += (sender, args) => UpdateControlBarMaxWidth();
+            LocationChanged += (sender, args) => UpdateControlBarMaxWidth();
+
             Closing += OnClosing;
         }
 
         private Action _debounceCloseTopBar;
+        private Action _debounceCloseBottomBar;
+        private Action _debounceCloseInfoOverlay;
+        private readonly DispatcherTimer _positionTimer;
+        private bool _isScrubbing;
+
+        /// <summary>
+        /// Limits the video control bar to 75% of the width of the monitor the window is on.
+        /// </summary>
+        private void UpdateControlBarMaxWidth()
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+
+            if (handle == IntPtr.Zero) return;
+
+            var screen = Screen.FromHandle(handle);
+
+            _model.ControlBarMaxWidth = screen.Bounds.Width * 0.75;
+        }
+
+        private void PreviewPaneOnMediaOpened(object? sender, EventArgs e)
+        {
+            _model.IsVideo = PreviewPane.HasPlayer;
+            _model.DurationSeconds = PreviewPane.Duration.TotalSeconds;
+            _model.IsPlaying = PreviewPane.IsPlaying;
+            _model.IsMuted = PreviewPane.IsMuted;
+            _model.NotifyTimeChanged();
+
+            if (_model.IsVideo)
+            {
+                _positionTimer.Start();
+            }
+        }
+
+        private void PositionTimerOnTick(object? sender, EventArgs e)
+        {
+            if (!PreviewPane.HasPlayer)
+            {
+                _model.IsVideo = false;
+                _positionTimer.Stop();
+                return;
+            }
+
+            _model.IsPlaying = PreviewPane.IsPlaying;
+
+            // While the user drags the thumb, the slider is the source of truth, not the player
+            if (_isScrubbing) return;
+
+            var duration = PreviewPane.Duration.TotalSeconds;
+
+            if (Math.Abs(duration - _model.DurationSeconds) > 0.01)
+            {
+                _model.DurationSeconds = duration;
+            }
+
+            _model.PositionSeconds = PreviewPane.Position.TotalSeconds;
+            _model.NotifyTimeChanged();
+        }
+
+        /// <summary>
+        /// Space plays and pauses a video, and falls back to the slideshow for still images.
+        /// </summary>
+        private void SpaceBarAction()
+        {
+            if (PreviewPane.HasPlayer)
+            {
+                TogglePlayPause();
+                return;
+            }
+
+            StartStopSlideShow();
+        }
+
+        private void TogglePlayPause()
+        {
+            PreviewPane.TogglePlayPause();
+            _model.IsPlaying = PreviewPane.IsPlaying;
+        }
+
+        private void ToggleLoop()
+        {
+            ServiceLocator.Settings.LoopVideo = !ServiceLocator.Settings.LoopVideo;
+        }
+
+        private void ToggleMute()
+        {
+            PreviewPane.ToggleMute();
+            _model.IsMuted = PreviewPane.IsMuted;
+        }
+
+        private void Seek_OnDragStarted(object sender, DragStartedEventArgs e)
+        {
+            _isScrubbing = true;
+        }
+
+        private void Seek_OnDragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            _isScrubbing = false;
+
+            PreviewPane.Position = TimeSpan.FromSeconds(_model.PositionSeconds);
+        }
+
+        private void BottomBar_OnMouseEnter(object sender, MouseEventArgs e)
+        {
+            _model.IsBottomHover = true;
+        }
+
+        private void BottomBar_OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            _debounceCloseBottomBar();
+        }
+
+        /// <summary>
+        /// Reveals the bottom control bar when the pointer nears the bottom of the window, and
+        /// optionally the info overlay when it reaches the right edge.
+        /// </summary>
+        private void Window_OnMouseMove(object sender, MouseEventArgs e)
+        {
+            var position = e.GetPosition(this);
+
+            if (PreviewPane.HasPlayer && position.Y >= ActualHeight - BottomHoverZone)
+            {
+                _model.IsBottomHover = true;
+            }
+
+            var settings = ServiceLocator.ExtendedSettings;
+
+            if (settings.InfoOverlayOnRightEdge
+                && _model.CurrentImage != null
+                && position.X >= ActualWidth - Math.Max(1, settings.InfoOverlayEdgeWidth))
+            {
+                _model.CurrentImage.IsParametersVisible = true;
+            }
+        }
+
+        private const int BottomHoverZone = 80;
+
+        private void InfoOverlay_OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            // Auto-hide only pairs with the edge gesture. Without it the overlay stays put until
+            // "I" is pressed again, which is the behaviour people expect from a toggle.
+            if (!ServiceLocator.ExtendedSettings.InfoOverlayOnRightEdge) return;
+
+            _debounceCloseInfoOverlay();
+        }
 
         private void RestartSlideShowTimer()
         {
@@ -98,6 +277,7 @@ namespace Diffusion.Toolkit
         private void OnClosing(object? sender, CancelEventArgs e)
         {
             _slideShowTimer?.Dispose();
+            _positionTimer.Stop();
         }
 
         private Timer? _slideShowTimer = null;
@@ -171,6 +351,17 @@ namespace Diffusion.Toolkit
         public void SetCurrentImage(ImageViewModel? value)
         {
             _model.CurrentImage = value;
+
+            // A still image tears down the player, so drop the control bar until a video loads
+            if (value is not { Type: ImageType.Video })
+            {
+                _positionTimer.Stop();
+                _model.IsVideo = false;
+                _model.IsPlaying = false;
+                _model.PositionSeconds = 0;
+                _model.DurationSeconds = 0;
+                _model.NotifyTimeChanged();
+            }
         }
 
 

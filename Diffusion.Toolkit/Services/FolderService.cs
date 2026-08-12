@@ -82,6 +82,7 @@ namespace Diffusion.Toolkit.Services
                 else if (folderChange.ChangeType == ChangeType.ChangePath)
                 {
                     _dataStore.ChangeFolderPath(folderChange.Path, folderChange.NewPath);
+                    ServiceLocator.ExtendedSettings.MoveFolderDisplayName(folderChange.Path, folderChange.NewPath);
                 }
             }
 
@@ -258,20 +259,40 @@ namespace Diffusion.Toolkit.Services
             //UpdateFolderChildren(folder, comparer);
         }
 
-        string GetFolderName(Folder folder)
+        /// <summary>
+        /// The label shown for a folder in the tree and the thumbnail grid. Root folders fall back
+        /// to their full path, but can carry a display name override from the sidecar settings -
+        /// that override is cosmetic and never touches the folder on disk or the Folder row.
+        /// </summary>
+        public string GetFolderName(Folder folder)
         {
             if (folder.IsRoot)
             {
-                return folder.Path;
+                return GetRootFolderName(folder.Path);
             }
             return Path.GetFileName(folder.Path);
+        }
+
+        /// <summary>
+        /// Display name for a root folder path, falling back to the path itself.
+        /// </summary>
+        public string GetRootFolderName(string path)
+        {
+            return ServiceLocator.ExtendedSettings.GetFolderDisplayName(path) ?? path;
         }
 
         public async Task LoadFolders()
         {
             ClearCache();
 
-            var folders = ServiceLocator.DataStore.GetFoldersView().ToList();
+            // The recursive folder query and the filesystem probes below can both be slow
+            // (large trees, network shares, disconnected drives). Resolve them off the
+            // calling thread so the UI stays responsive while folders are loaded.
+            var folders = await Task.Run(() => ServiceLocator.DataStore.GetFoldersView().ToList());
+
+            var rootFolderExists = await Task.Run(() => folders
+                .Where(d => d.IsRoot)
+                .ToDictionary(d => d.Path, d => Directory.Exists(d.Path)));
 
             _dispatcher.Invoke(() =>
                 {
@@ -288,7 +309,7 @@ namespace Diffusion.Toolkit.Services
                             IsArchived = folder.Archived,
                             IsExcluded = folder.Excluded,
                             IsRecursive = folder.Recursive,
-                            IsUnavailable = !Directory.Exists(folder.Path),
+                            IsUnavailable = !rootFolderExists[folder.Path],
                             IsScanned = true
                         }));
                     }
@@ -320,7 +341,7 @@ namespace Diffusion.Toolkit.Services
                                     Path = folder.Path,
                                     IsArchived = folder.Archived,
                                     IsExcluded = folder.Excluded,
-                                    IsUnavailable = !Directory.Exists(folder.Path),
+                                    IsUnavailable = !rootFolderExists[folder.Path],
                                     IsScanned = true
                                 });
 
@@ -844,6 +865,7 @@ namespace Diffusion.Toolkit.Services
                         if (ServiceLocator.DataStore.FolderHasImages(e.OldFullPath))
                         {
                             ServiceLocator.DataStore.ChangeFolderPath(e.OldFullPath, e.FullPath);
+                            ServiceLocator.ExtendedSettings.MoveFolderDisplayName(e.OldFullPath, e.FullPath);
                         }
                         else
                         {
@@ -1053,6 +1075,9 @@ namespace Diffusion.Toolkit.Services
             {
                 ServiceLocator.DataStore.RemoveFolder(folder.Id);
 
+                // Don't leave a display name behind for a folder that is no longer in the library
+                ServiceLocator.ExtendedSettings.SetFolderDisplayName(folder.Path, null);
+
                 RemoveWatcher(folder.Path);
 
                 await LoadFolders();
@@ -1083,6 +1108,35 @@ namespace Diffusion.Toolkit.Services
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Renames the label shown for a root folder. Unlike <see cref="ShowRenameFolderDialog"/>
+        /// this touches nothing on disk and nothing in the database - the override is kept in the
+        /// sidecar settings file, keyed by path.
+        /// </summary>
+        public async Task<bool> ShowRenameRootFolderDisplayDialog(FolderViewModel folder)
+        {
+            var title = GetLocalizedText("Actions.Folders.RenameDisplayName.Title");
+
+            var currentName = ServiceLocator.ExtendedSettings.GetFolderDisplayName(folder.Path) ?? string.Empty;
+
+            var (result, name) = await ServiceLocator.MessageService.ShowInput(
+                GetLocalizedText("Actions.Folders.RenameDisplayName.Message"), title, currentName);
+
+            if (result != PopupResult.OK) return false;
+
+            ServiceLocator.ExtendedSettings.SetFolderDisplayName(folder.Path, name);
+
+            _dispatcher.Invoke(() =>
+            {
+                folder.Name = GetRootFolderName(folder.Path);
+            });
+
+            // The grid shows root folders as entries too, so refresh whatever is on screen
+            ServiceLocator.SearchService.RefreshResults();
+
+            return true;
         }
 
         public async Task<(bool, NamePath?)> ShowRenameFolderDialog(string oldName, string oldPath)
@@ -1123,6 +1177,7 @@ namespace Diffusion.Toolkit.Services
 
                     // Update database
                     ServiceLocator.DataStore.ChangeFolderPath(oldPath, newPath);
+                    ServiceLocator.ExtendedSettings.MoveFolderDisplayName(oldPath, newPath);
 
                     // Update UI
 

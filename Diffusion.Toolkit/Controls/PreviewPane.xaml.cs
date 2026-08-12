@@ -456,7 +456,15 @@ namespace Diffusion.Toolkit.Controls
 
         public void ToggleInfo()
         {
-            Image.IsParametersVisible = !Image.IsParametersVisible;
+            // The two viewers keep separate overlay state, so toggle whichever one we are
+            if (IsPopout)
+            {
+                Image.IsParametersVisible = !Image.IsParametersVisible;
+            }
+            else
+            {
+                Image.IsSideParametersVisible = !Image.IsSideParametersVisible;
+            }
         }
 
         public bool IsPopout { get; set; }
@@ -566,8 +574,13 @@ namespace Diffusion.Toolkit.Controls
 
             Player = (MediaElement)sender;
 
+            ApplyMuteState();
+
             isPlaying = true;
             Player?.Play();
+
+            OnPropertyChanged(nameof(HasPlayer));
+            OnPropertyChanged(nameof(IsPlaying));
         }
 
         private void Player_OnMediaEnded(object sender, RoutedEventArgs e)
@@ -580,11 +593,17 @@ namespace Diffusion.Toolkit.Controls
                 isEnded = false;
                 isPlaying = true;
             }
+
+            OnPropertyChanged(nameof(IsPlaying));
         }
 
         private void ScrollViewer_OnLoaded(object sender, RoutedEventArgs e)
         {
             Player = null;
+
+            // A still image replaced the video, so anything driving playback controls should stop
+            OnPropertyChanged(nameof(HasPlayer));
+            OnPropertyChanged(nameof(IsPlaying));
 
             ScrollViewer = (ScrollViewer)sender;
             Preview = FindVisualChildren<System.Windows.Controls.Image>(ScrollViewer).First();
@@ -617,23 +636,11 @@ namespace Diffusion.Toolkit.Controls
 
         private bool isPlaying = true;
         private bool isEnded = false;
+        private bool _userMuted;
 
         private void Player_OnMouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (isPlaying)
-            {
-                Player?.Pause();
-            }
-            else
-            {
-                if (isEnded)
-                {
-                    Player?.Position = TimeSpan.FromMilliseconds(1);
-                    isEnded = false;
-                }
-                Player?.Play();
-            }
-            isPlaying = !isPlaying;
+            TogglePlayPause();
             e.Handled = true;
         }
 
@@ -646,12 +653,103 @@ namespace Diffusion.Toolkit.Controls
         {
             isPlaying = false;
             Player?.Pause();
+
+            OnPropertyChanged(nameof(IsPlaying));
+        }
+
+        /// <summary>
+        /// Raised once the media element has a duration, so a host can size its seek bar.
+        /// </summary>
+        public event EventHandler? MediaOpened;
+
+        /// <summary>
+        /// True while a video is loaded. Still images don't create a player.
+        /// </summary>
+        public bool HasPlayer => Player != null;
+
+        public bool IsPlaying => isPlaying;
+
+        public TimeSpan Position
+        {
+            get => Player?.Position ?? TimeSpan.Zero;
+            set
+            {
+                if (Player == null) return;
+
+                Player.Position = value;
+                isEnded = false;
+            }
+        }
+
+        public TimeSpan Duration => Player is { NaturalDuration.HasTimeSpan: true }
+            ? Player.NaturalDuration.TimeSpan
+            : TimeSpan.Zero;
+
+        /// <summary>
+        /// In the docked pane this follows the "mute side panel video" setting, so browsing the
+        /// grid doesn't blast audio. In the popped out viewer it follows the mute button.
+        /// </summary>
+        public bool IsMuted
+        {
+            get => IsPopout ? _userMuted : ServiceLocator.ExtendedSettings.MuteSidePanelVideo;
+            set
+            {
+                if (IsPopout)
+                {
+                    _userMuted = value;
+                }
+                else
+                {
+                    ServiceLocator.ExtendedSettings.MuteSidePanelVideo = value;
+                }
+
+                ApplyMuteState();
+
+                OnPropertyChanged();
+            }
+        }
+
+        public void ToggleMute()
+        {
+            IsMuted = !IsMuted;
+        }
+
+        public void TogglePlayPause()
+        {
+            if (Player == null) return;
+
+            if (isPlaying)
+            {
+                Player.Pause();
+            }
+            else
+            {
+                if (isEnded)
+                {
+                    Player.Position = TimeSpan.FromMilliseconds(1);
+                    isEnded = false;
+                }
+                Player.Play();
+            }
+
+            isPlaying = !isPlaying;
+
+            OnPropertyChanged(nameof(IsPlaying));
+        }
+
+        private void ApplyMuteState()
+        {
+            if (Player == null) return;
+
+            Player.IsMuted = IsMuted;
         }
 
         private void MediaElement_OnMediaOpened(object sender, RoutedEventArgs e)
         {
             if (Image.Type == ImageType.Video)
             {
+                ApplyMuteState();
+
                 if (IsPopout || !MainModel.IsPreviewOpen)
                 {
                     isPlaying = true;
@@ -667,9 +765,16 @@ namespace Diffusion.Toolkit.Controls
                         {
                             isPlaying = false;
                             Player?.Stop();
+
+                            OnPropertyChanged(nameof(IsPlaying));
                         });
                     });
                 }
+
+                OnPropertyChanged(nameof(IsPlaying));
+                OnPropertyChanged(nameof(IsMuted));
+
+                MediaOpened?.Invoke(this, EventArgs.Empty);
             }
         }
     }

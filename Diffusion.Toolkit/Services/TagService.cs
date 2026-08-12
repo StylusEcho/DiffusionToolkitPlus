@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Diffusion.Toolkit.Models;
 
 namespace Diffusion.Toolkit.Services;
 
 public class TagService
 {
-    public Action LoadTags;
+    public Func<Task> LoadTags;
 
     public void CreateTags(IEnumerable<string> names)
     {
@@ -73,7 +74,7 @@ public class TagService
                             ServiceLocator.DataStore.RemoveImagesTag(ids, imageTag.Id);
                         }
 
-                        LoadTags?.Invoke();
+                        _ = LoadTags?.Invoke();
                     }
                 }
                 else
@@ -89,7 +90,7 @@ public class TagService
                             ServiceLocator.DataStore.RemoveImageTag(imageModelId, imageTag.Id);
                         }
 
-                        LoadTags?.Invoke();
+                        _ = LoadTags?.Invoke();
                     }
                 }
 

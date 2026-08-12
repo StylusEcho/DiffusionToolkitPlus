@@ -45,6 +45,11 @@ namespace Diffusion.Toolkit
                 await ServiceLocator.FolderService.ShowRenameFolderDialog(o.Name, o.Path);
             });
 
+            _model.RenameFolderDisplayNameCommand = new AsyncCommand<FolderViewModel>(async (o) =>
+            {
+                await ServiceLocator.FolderService.ShowRenameRootFolderDisplayDialog(o);
+            });
+
             _model.RemoveFolderCommand = new AsyncCommand<FolderViewModel>(async (o) =>
             {
                 if (o.IsRoot)

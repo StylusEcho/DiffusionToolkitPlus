@@ -14,6 +14,12 @@ public static class AppInfo
 
     public static string SettingsPath { get; }
 
+    /// <summary>
+    /// Settings that only exist in this build. Kept in a separate file so that the original
+    /// Diffusion Toolkit, which rewrites config.json wholesale when it saves, cannot drop them.
+    /// </summary>
+    public static string ExtendedSettingsPath { get; }
+
     public static bool IsPortable { get; }
 
     static AppInfo()
@@ -38,6 +44,7 @@ public static class AppInfo
             DatabasePath = Path.Combine(AppInfo.AppDataPath, "diffusion-toolkit.db");
         }
 
+        ExtendedSettingsPath = Path.Combine(Path.GetDirectoryName(SettingsPath)!, "config.extended.json");
     }
 
 

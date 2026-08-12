@@ -11,4 +11,11 @@
     <PackageReference Include="Emgu.CV.runtime.windows" Version="4.12.0.5764" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Already vendored in lib/ and used by Diffusion.IO; read AVI stream details with it -->
+    <Reference Include="MetadataExtractor">
+      <HintPath>..\lib\MetadataExtractor.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

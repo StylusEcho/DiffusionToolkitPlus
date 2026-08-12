@@ -41,7 +41,7 @@ namespace Diffusion.Toolkit
 
                     ServiceLocator.TagService.CreateTags(normalizedlines);
 
-                    LoadTags();
+                    await LoadTags();
                 }
             });
 
@@ -80,7 +80,7 @@ namespace Diffusion.Toolkit
 
                     ServiceLocator.TagService.CreateTag(name);
 
-                    LoadTags();
+                    await LoadTags();
                 }
             });
 
@@ -105,7 +105,7 @@ namespace Diffusion.Toolkit
 
                     UpdateTagName(tag.Id, name);
 
-                    LoadTags();
+                    await LoadTags();
                 }
             });
 
@@ -127,7 +127,7 @@ namespace Diffusion.Toolkit
                         }
                     }
 
-                    LoadTags();
+                    await LoadTags();
 
                     // TODO: Detect whether we need to refresh?
                     _search.ReloadMatches(null);
@@ -137,7 +137,7 @@ namespace Diffusion.Toolkit
 
         }
 
-        private void LoadTags()
+        private async Task LoadTags()
         {
             HashSet<int> currentSelected = new HashSet<int>();
 
@@ -146,15 +146,22 @@ namespace Diffusion.Toolkit
                 currentSelected = _model.Tags.Where(d => d.IsTicked).Select(d => d.Id).ToHashSet();
             }
 
-            _model.Tags = ServiceLocator.TagService.GetTagFilterViews();
+            // Tag counts are computed with a subquery per tag over the image tags, so keep
+            // the query off the UI thread.
+            var tags = await Task.Run(() => ServiceLocator.TagService.GetTagFilterViews());
 
-            if (currentSelected.Any())
+            Dispatcher.Invoke(() =>
             {
-                foreach (var tag in _model.Tags)
+                _model.Tags = tags;
+
+                if (currentSelected.Any())
                 {
-                    tag.IsTicked = currentSelected.Contains(tag.Id);
+                    foreach (var tag in _model.Tags)
+                    {
+                        tag.IsTicked = currentSelected.Contains(tag.Id);
+                    }
                 }
-            }
+            });
         }
 
         public void UpdateTagName(int id, string name)

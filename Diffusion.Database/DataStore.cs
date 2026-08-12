@@ -44,27 +44,37 @@ public partial class DataStore
 
     public async Task Create(Func<object> notify, Action<object> complete)
     {
-        var databaseDir = Path.GetDirectoryName(DatabasePath);
-
-        if (!Directory.Exists(databaseDir))
+        // Opening the database and loading the extensions hits the disk and can take a
+        // noticeable amount of time, so keep it off the caller's thread. On startup that
+        // caller is the UI thread, and any work done here freezes the window.
+        using var db = await Task.Run(() =>
         {
-            Directory.CreateDirectory(databaseDir);
-        }
+            var databaseDir = Path.GetDirectoryName(DatabasePath);
 
-        using var db = OpenConnection();
+            if (!Directory.Exists(databaseDir))
+            {
+                Directory.CreateDirectory(databaseDir);
+            }
 
-        db.EnableLoadExtension(true);
+            var connection = OpenConnection();
 
-        if (!File.Exists("extensions\\path0.dll"))
-        {
-            throw new FileNotFoundException("Failed to load SQLite extensions", "path0.dll");
-        }
+            connection.EnableLoadExtension(true);
 
-        db.LoadExtension("extensions\\path0.dll");
-        
-        var migrations = new Migrations(db);
+            if (!File.Exists("extensions\\path0.dll"))
+            {
+                throw new FileNotFoundException("Failed to load SQLite extensions", "path0.dll");
+            }
 
-        if (migrations.RequiresMigration(MigrationType.Pre))
+            connection.LoadExtension("extensions\\path0.dll");
+
+            return connection;
+        });
+
+        // Creating the migrations table is a write, and looking for pending migrations is a
+        // query - neither should block the caller either.
+        var migrations = await Task.Run(() => new Migrations(db));
+
+        if (await Task.Run(() => migrations.RequiresMigration(MigrationType.Pre)))
         {
             var handle = notify?.Invoke();
             try
@@ -186,7 +196,7 @@ public partial class DataStore
         });
 
 
-        if (migrations.RequiresMigration(MigrationType.Post))
+        if (await Task.Run(() => migrations.RequiresMigration(MigrationType.Post)))
         {
             var handle = notify?.Invoke();
             try

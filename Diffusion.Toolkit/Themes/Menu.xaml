@@ -9,10 +9,11 @@
     <SolidColorBrush x:Key="Menu.Static.Foreground" Color="#FF212121"/>
     <SolidColorBrush x:Key="Menu.Static.Separator" Color="#FFD7D7D7"/>
     <SolidColorBrush x:Key="Menu.Disabled.Foreground" Color="#FF707070"/>
-    <SolidColorBrush x:Key="MenuItem.Selected.Background" Color="#3D26A0DA"/>
-    <SolidColorBrush x:Key="MenuItem.Selected.Border" Color="#FF26A0DA"/>
-    <SolidColorBrush x:Key="MenuItem.Highlight.Background" Color="#3D26A0DA"/>
-    <SolidColorBrush x:Key="MenuItem.Highlight.Border" Color="#FF26A0DA"/>
+    <!-- Follow the active theme rather than a fixed blue, so dark mode stays neutral -->
+    <SolidColorBrush x:Key="MenuItem.Selected.Background" Color="{DynamicResource BgHighlight}"/>
+    <SolidColorBrush x:Key="MenuItem.Selected.Border" Color="{DynamicResource HighlightFocused}"/>
+    <SolidColorBrush x:Key="MenuItem.Highlight.Background" Color="{DynamicResource BgHighlight}"/>
+    <SolidColorBrush x:Key="MenuItem.Highlight.Border" Color="{DynamicResource HighlightFocused}"/>
     <SolidColorBrush x:Key="MenuItem.Highlight.Disabled.Background" Color="#0A000000"/>
     <SolidColorBrush x:Key="MenuItem.Highlight.Disabled.Border" Color="#21000000"/>
     <MenuScrollingVisibilityConverter x:Key="MenuScrollingVisibilityConverter"/>
@@ -33,7 +34,7 @@
                     <ColumnDefinition Width="20" />
                 </Grid.ColumnDefinitions>
                 <ContentPresenter Content="{TemplateBinding MenuItem.Icon}" ContentSource="Icon" Name="Icon" Width="16" Height="16" Margin="3,3,3,3" HorizontalAlignment="Center" VerticalAlignment="Center" SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" />
-                <Border BorderThickness="1,1,1,1" BorderBrush="#FF26A0DA" Background="#3D26A0DA" Name="GlyphPanel" Width="22" Height="22" Margin="-1,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Hidden" ClipToBounds="False">
+                <Border BorderThickness="1,1,1,1" BorderBrush="{DynamicResource HighlightFocusedBrush}" Background="{DynamicResource HighlightBrush}" Name="GlyphPanel" Width="22" Height="22" Margin="-1,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Hidden" ClipToBounds="False">
                     <Path Data="F1M10,1.2L4.7,9.1 4.5,9.1 0,5.2 1.3,3.5 4.3,6.1 8.3,0 10,1.2z" Fill="{StaticResource ForegroundBrush}" Name="Glyph" Width="10" Height="11" FlowDirection="LeftToRight" />
                 </Border>
                 <ContentPresenter RecognizesAccessKey="True" Content="{TemplateBinding HeaderedContentControl.Header}" ContentTemplate="{TemplateBinding HeaderedContentControl.HeaderTemplate}" ContentStringFormat="{TemplateBinding HeaderedItemsControl.HeaderStringFormat}" ContentSource="Header" Name="menuHeaderContainer" Margin="{TemplateBinding Control.Padding}" HorizontalAlignment="Left" VerticalAlignment="Center" SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" Grid.Column="2" />

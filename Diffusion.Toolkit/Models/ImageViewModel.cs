@@ -192,13 +192,35 @@ public class ImageViewModel : BaseNotify
         set => SetField(ref field, value);
     }
 
+    /// <summary>
+    /// Info overlay in the full screen / popped out viewer. Toggled by the "I" key.
+    /// </summary>
     public bool IsParametersVisible
     {
         get;
         set => SetField(ref field, value);
     }
 
+    /// <summary>
+    /// Info overlay in the docked preview pane. Deliberately separate from
+    /// <see cref="IsParametersVisible"/> so the two viewers don't toggle each other.
+    /// </summary>
+    public bool IsSideParametersVisible
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
     public ICommand ToggleParameters
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
+    /// Toggles the docked preview pane's info overlay.
+    /// </summary>
+    public ICommand ToggleSideParameters
     {
         get;
         set => SetField(ref field, value);
@@ -271,6 +293,16 @@ public class ImageViewModel : BaseNotify
     }
 
     public ImageType Type
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
+    /// Technical details of the current video, read from the file on demand. Null for images and
+    /// while a video's details are still being read. Never persisted to the database.
+    /// </summary>
+    public VideoInfoViewModel? VideoInfo
     {
         get;
         set => SetField(ref field, value);

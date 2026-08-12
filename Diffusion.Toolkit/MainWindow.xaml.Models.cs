@@ -19,27 +19,40 @@ namespace Diffusion.Toolkit
 {
     public partial class MainWindow
     {
-        public void LoadImageModels()
+        public async Task LoadImageModels()
         {
             var existingModels = _model.ImageModels == null ? Enumerable.Empty<ModelViewModel>() : _model.ImageModels.ToList();
 
-            var imageModels = _dataStore.GetImageModels();
-
-            _model.ImageModels = imageModels.Select(m => new ModelViewModel()
+            // This groups over the entire image table, which takes seconds on a large
+            // library, so it must not run on the UI thread.
+            var (models, modelNames) = await Task.Run(() =>
             {
-                IsTicked = existingModels.FirstOrDefault(d => d.Name == m.Name || d.Hash == m.Hash)?.IsTicked ?? false,
-                Name = m.Name ?? ResolveModelName(m.Hash),
-                Hash = m.Hash,
-                ImageCount = m.ImageCount
-            }).Where(m => !string.IsNullOrEmpty(m.Name) && !string.IsNullOrEmpty(m.Hash)).OrderBy(x => x.Name).ToList();
+                var imageModels = _dataStore.GetImageModels().ToList();
 
-            foreach (var model in _model.ImageModels)
+                var views = imageModels.Select(m => new ModelViewModel()
+                {
+                    IsTicked = existingModels.FirstOrDefault(d => d.Name == m.Name || d.Hash == m.Hash)?.IsTicked ?? false,
+                    Name = m.Name ?? ResolveModelName(m.Hash),
+                    Hash = m.Hash,
+                    ImageCount = m.ImageCount
+                }).Where(m => !string.IsNullOrEmpty(m.Name) && !string.IsNullOrEmpty(m.Hash)).OrderBy(x => x.Name).ToList();
+
+                var names = imageModels.Where(m => !string.IsNullOrEmpty(m.Name)).Select(m => m.Name).OrderBy(x => x).ToList();
+
+                return (views, names);
+            });
+
+            Dispatcher.Invoke(() =>
             {
-                model.PropertyChanged += ImageModelOnPropertyChanged;
-            }
+                _model.ImageModels = models;
 
-            _model.ImageModelNames = imageModels.Where(m => !string.IsNullOrEmpty(m.Name)).Select(m => m.Name).OrderBy(x => x);
+                foreach (var model in _model.ImageModels)
+                {
+                    model.PropertyChanged += ImageModelOnPropertyChanged;
+                }
 
+                _model.ImageModelNames = modelNames;
+            });
         }
 
         private void ImageModelOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -121,7 +134,7 @@ namespace Diffusion.Toolkit
 
                         await _messagePopupManager.Show(message, "Download Civitai models", PopupButtons.OK);
 
-                        LoadModels();
+                        await LoadModels();
                     }
                     finally
                     {

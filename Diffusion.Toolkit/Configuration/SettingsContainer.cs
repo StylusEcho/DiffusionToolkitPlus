@@ -42,6 +42,26 @@ public abstract class SettingsContainer : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
+    /// <summary>
+    /// Marks a setting as changed when it was mutated in place rather than assigned, such as a
+    /// collection property whose contents were edited.
+    /// </summary>
+    protected void RaiseSettingChanged(string propertyName, object? oldValue = null, object? newValue = null)
+    {
+        _isPropertyDirty[propertyName] = true;
+
+        _isDirty = true;
+
+        SettingChanged?.Invoke(this, new SettingChangedEventArgs()
+        {
+            SettingName = propertyName,
+            OldValue = oldValue,
+            NewValue = newValue,
+        });
+
+        OnPropertyChanged(propertyName);
+    }
+
     protected bool UpdateValue<T>(ref T field, T value, [CallerMemberName] string propertyName = "")
     {
         if (EqualityComparer<T>.Default.Equals(field, value)) return false;
