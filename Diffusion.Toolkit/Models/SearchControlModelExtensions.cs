@@ -87,6 +87,19 @@ public static class SearchControlModelExtensions
         model.UseUnavailable = filter.UseUnavailable;
         model.Unavailable = filter.Unavailable;
 
+        // The model builds its own Types checkboxes, so the saved selection has to be applied onto
+        // them. Without this a saved query still filters correctly - the query carries the raw
+        // Filter - but the Filter window and the toolbar buttons show nothing selected.
+        model.UseTypes = filter.UseTypes;
+
+        if (filter.Types != null)
+        {
+            foreach (var item in model.Types)
+            {
+                item.IsChecked = item.Value is ImageType type && filter.Types.Contains(type);
+            }
+        }
+
         model.NodeFilters = new ObservableCollection<Controls.NodeFilter>(filter.NodeFilters.Select(d => new Controls.NodeFilter()
         {
             IsActive = d.IsActive,

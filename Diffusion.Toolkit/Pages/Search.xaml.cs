@@ -2011,9 +2011,9 @@ namespace Diffusion.Toolkit.Pages
             {
                 if (AutoHideEnabled)
                 {
-                    var width = GetNavigationPaneWidth();
-
-                    NavigationPanel.Width = width.IsAbsolute && width.Value > 0 ? width.Value : 250;
+                    // Match the width the pane had while docked, so switching auto-hide on doesn't
+                    // resize it
+                    NavigationPanel.Width = GetFloatingNavigationPaneWidth();
                     NavigationPanel.HorizontalAlignment = HorizontalAlignment.Left;
                     Panel.SetZIndex(NavigationPanel, 10);
                     Grid.SetColumnSpan(NavigationPanel, 3);
@@ -2060,6 +2060,29 @@ namespace Diffusion.Toolkit.Pages
         }
 
         private const string DefaultNavigationPaneWidth = "*";
+
+        /// <summary>
+        /// Pixel width for the floating pane, taken from the last width it had while docked.
+        /// </summary>
+        private double GetFloatingNavigationPaneWidth()
+        {
+            var recorded = ServiceLocator.ExtendedSettings.NavigationPaneWidth;
+
+            return recorded > 0 ? recorded : ExtendedSettings.DefaultNavigationPaneWidth;
+        }
+
+        /// <summary>
+        /// Records the docked width so the floating pane can reuse it. A floating pane is already
+        /// sized from this value, and a collapsed one has no width worth keeping.
+        /// </summary>
+        private void NavigationPanel_OnSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (AutoHideEnabled) return;
+            if (NavigationPanel.Visibility != Visibility.Visible) return;
+            if (!(NavigationPanel.ActualWidth > 0)) return;
+
+            ServiceLocator.ExtendedSettings.NavigationPaneWidth = NavigationPanel.ActualWidth;
+        }
 
         private void NavigationPane_OnMouseEnter(object sender, MouseEventArgs e)
         {

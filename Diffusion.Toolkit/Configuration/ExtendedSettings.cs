@@ -14,6 +14,11 @@ namespace Diffusion.Toolkit.Configuration;
 /// </summary>
 public class ExtendedSettings : SettingsContainer
 {
+    /// <summary>
+    /// Width the floating navigation pane falls back to before a docked width has been recorded.
+    /// </summary>
+    public const double DefaultNavigationPaneWidth = 250;
+
     private Dictionary<string, string> _folderDisplayNames = NewNameDictionary(null);
     private VideoMetadataSettings _videoMetadata = new VideoMetadataSettings();
 
@@ -25,6 +30,7 @@ public class ExtendedSettings : SettingsContainer
         QuickAlbumName = "Quick Album";
         RemoveDeletedFilesFromLibrary = true;
         AutoCollapseNavigationPane = false;
+        NavigationPaneWidth = DefaultNavigationPaneWidth;
         HideRatingsBarWhileVideoPlays = true;
         VideoSectionState = AccordionState.Expanded;
         VideoMetadata = new VideoMetadataSettings();
@@ -91,6 +97,21 @@ public class ExtendedSettings : SettingsContainer
     /// Collapse the navigation pane when the pointer moves away from it.
     /// </summary>
     public bool AutoCollapseNavigationPane
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Rendered width of the navigation pane, in pixels.
+    /// </summary>
+    /// <remarks>
+    /// Docked, the pane is sized by a star-based grid column, so there is no pixel width to read
+    /// back. Floating, it needs one. Recording the docked width here lets the floating pane match
+    /// it instead of falling back to a fixed default and appearing to change size when auto-hide
+    /// is switched on.
+    /// </remarks>
+    public double NavigationPaneWidth
     {
         get;
         set => UpdateValue(ref field, value);
