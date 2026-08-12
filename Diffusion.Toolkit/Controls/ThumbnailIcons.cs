@@ -43,6 +43,7 @@ public class ThumbnailIcons : FrameworkElement
                 {
                     case nameof(ImageEntry.NSFW):
                     case nameof(ImageEntry.AlbumCount):
+                    case nameof(ImageEntry.IsInQuickAlbum):
                     case nameof(ImageEntry.ForDeletion):
                     case nameof(ImageEntry.Favorite):
                     case nameof(ImageEntry.Rating):
@@ -98,6 +99,62 @@ public class ThumbnailIcons : FrameworkElement
     }
 
 
+    private static SolidColorBrush? _accentBrush;
+    private static Color _accentColor;
+    private static readonly Pen BadgeOutline = CreateBadgeOutline();
+
+    private static Pen CreateBadgeOutline()
+    {
+        var pen = new Pen(new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)), 1);
+        pen.Freeze();
+        return pen;
+    }
+
+    /// <summary>
+    /// The theme's accent colour, rebuilt only when the theme actually changes it.
+    /// </summary>
+    private static Brush AccentBrush
+    {
+        get
+        {
+            var color = Application.Current?.TryFindResource("Accent") as Color? ?? Colors.Cyan;
+
+            if (_accentBrush == null || _accentColor != color)
+            {
+                _accentColor = color;
+                _accentBrush = new SolidColorBrush(color);
+                _accentBrush.Freeze();
+            }
+
+            return _accentBrush;
+        }
+    }
+
+    /// <summary>
+    /// An accent diamond, matching the marker used beside the quick album in the sidebar.
+    /// </summary>
+    private static void DrawQuickAlbumBadge(DrawingContext drawingContext, double x, double y)
+    {
+        const double radius = 8;
+
+        var cx = x + 12;
+        var cy = y + 12;
+
+        var geometry = new StreamGeometry();
+
+        using (var ctx = geometry.Open())
+        {
+            ctx.BeginFigure(new Point(cx, cy - radius), true, true);
+            ctx.LineTo(new Point(cx + radius, cy), true, false);
+            ctx.LineTo(new Point(cx, cy + radius), true, false);
+            ctx.LineTo(new Point(cx - radius, cy), true, false);
+        }
+
+        geometry.Freeze();
+
+        drawingContext.DrawGeometry(AccentBrush, BadgeOutline, geometry);
+    }
+
     protected override void OnRender(DrawingContext drawingContext)
     {
         base.OnRender(drawingContext);
@@ -108,6 +165,13 @@ public class ThumbnailIcons : FrameworkElement
         var x = 0;
         var y = 0;
         const int xOffset = 22;
+
+        // Quick album marker, drawn first so it sits in the top left corner
+        if (Data.IsInQuickAlbum)
+        {
+            DrawQuickAlbumBadge(drawingContext, x, y);
+            x += xOffset;
+        }
 
         //if (Data.ForDeletion)
         //{

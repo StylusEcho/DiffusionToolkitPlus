@@ -71,6 +71,7 @@
             Loaded="PreviewPane_OnLoaded"
             Drop="PreviewPane_OnDrop"
             Volume="{Binding MainModel.Settings.Volume}"
+            RatingsBarAlignment="Top"
             ></controls:PreviewPane>
 
 
@@ -136,7 +137,7 @@
                                             VerticalAlignment="Top"
                                             HorizontalAlignment="Stretch"
                                             Background="{DynamicResource PrimaryBrush}"
-                                            TextForeground="{DynamicResource ForegroundBrush}"
+                                            TextForeground="White"
                                             CurrentImage="{Binding CurrentImage}"
                                             MouseLeave="InfoOverlay_OnMouseLeave">
                     </controls:MetadataPanel>
@@ -339,7 +340,8 @@
                                 Value="{Binding PositionSeconds, Mode=TwoWay}"
                                 IsMoveToPointEnabled="True"
                                 Thumb.DragStarted="Seek_OnDragStarted"
-                                Thumb.DragCompleted="Seek_OnDragCompleted"/>
+                                Thumb.DragCompleted="Seek_OnDragCompleted"
+                                ValueChanged="Seek_OnValueChanged"/>
 
                         <TextBlock Grid.Column="3" VerticalAlignment="Center" Margin="4,0,10,0"
                                    Foreground="White" FontSize="13">

@@ -4,6 +4,7 @@ using Diffusion.Common.Query;
 using Diffusion.Database;
 using Diffusion.Database.Models;
 using Diffusion.IO;
+using Diffusion.Toolkit.Behaviors;
 using Diffusion.Toolkit.Classes;
 using Diffusion.Toolkit.Common;
 using Diffusion.Toolkit.Configuration;
@@ -760,6 +761,29 @@ namespace Diffusion.Toolkit.Pages
             _model.Results = text;
         }
 
+        /// <summary>
+        /// True when the sidebar folder tree filters the current results rather than navigating.
+        /// The folder view navigates into a folder instead, so it is excluded.
+        /// </summary>
+        private bool IsFolderFilterView => _currentModeSettings.Key != "folders";
+
+        /// <summary>
+        /// Paths of the folders selected in the sidebar, or null when nothing is selected and the
+        /// whole library should be shown.
+        /// </summary>
+        private IReadOnlyCollection<string>? GetSelectedFolderFilter()
+        {
+            if (!IsFolderFilterView) return null;
+
+            var paths = ServiceLocator.FolderService.SelectedFolders
+                .Where(d => d is { IsUnavailable: false, IsHome: false } && !string.IsNullOrEmpty(d.Path))
+                .Select(d => d.Path)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return paths.Count == 0 ? null : paths;
+        }
+
         public void SearchImages(QueryOptions? queryOptions, bool focus = false)
         {
             if (!ServiceLocator.FolderService.RootFolders.Any())
@@ -849,6 +873,7 @@ namespace Diffusion.Toolkit.Pages
                         TagIds = tags,
                         TagsMode = _model.TagsMode,
                         Folder = _model.FolderPath == RootFolders ? null : _model.FolderPath,
+                        FolderPaths = GetSelectedFolderFilter(),
                         SearchNodes = _model.SearchSettings.SearchNodes,
                         SearchAllProperties = _model.SearchSettings.SearchAllProperties,
                         SearchRawData = _model.SearchSettings.SearchRawData,
@@ -1101,6 +1126,7 @@ namespace Diffusion.Toolkit.Pages
                     imageViewModel.Rating = image.Rating;
                     imageViewModel.NSFW = image.NSFW;
                     imageViewModel.ForDeletion = image.ForDeletion;
+                    imageViewModel.IsInQuickAlbum = ServiceLocator.AlbumService.IsInQuickAlbum(image.Id);
                     imageViewModel.Albums = ServiceLocator.DataStore.GetImageAlbums(image.Id);
                     var albumLookup = imageViewModel.Albums.ToDictionary(x => x.Id);
 
@@ -1402,6 +1428,9 @@ namespace Diffusion.Toolkit.Pages
             var count = 0;
             var images = new List<ImageEntry>();
 
+            // One read per page rather than a query per thumbnail
+            ServiceLocator.AlbumService.RefreshQuickAlbum();
+
             foreach (var file in matches)
             {
                 var imageEntry = new ImageEntry(rId)
@@ -1421,6 +1450,7 @@ namespace Diffusion.Toolkit.Pages
                     Dispatcher = Dispatcher,
                     HasError = file.HasError,
                     Type = file.Type,
+                    IsInQuickAlbum = ServiceLocator.AlbumService.IsInQuickAlbum(file.Id),
                 };
 
                 images.Add(imageEntry);
@@ -1792,6 +1822,59 @@ namespace Diffusion.Toolkit.Pages
         }
 
         /// <summary>
+        /// Reorders the sidebar album list by drag and drop, persisting the new order.
+        /// </summary>
+        /// <remarks>
+        /// Writes the existing Album.Order column and switches the sort to Custom, which is the
+        /// app's own ordering feature - no schema change and the original app honours it too.
+        /// The quick album is pinned to the top and stays out of the reordering.
+        /// </remarks>
+        private void Albums_OnDragSortDrop(object sender, RoutedEventArgs e)
+        {
+            if (e is not DragSortDropEventArgs dropArgs) return;
+
+            var albums = _model.MainModel.Albums;
+
+            if (albums == null) return;
+
+            var sourceIndex = dropArgs.SourceIndex;
+            var targetIndex = dropArgs.TargetIndex;
+
+            if (sourceIndex == targetIndex) return;
+            if (sourceIndex < 0 || sourceIndex >= albums.Count) return;
+            if (targetIndex < 0 || targetIndex >= albums.Count) return;
+
+            // Dragging the pinned quick album, or dropping above it, would fight the pinning
+            if (albums[sourceIndex].IsQuickAlbum) return;
+            if (albums[targetIndex].IsQuickAlbum) return;
+
+            var item = albums[sourceIndex];
+            albums.RemoveAt(sourceIndex);
+            albums.Insert(targetIndex, item);
+
+            for (var i = 0; i < albums.Count; i++)
+            {
+                albums[i].Order = i + 1;
+            }
+
+            ServiceLocator.Settings.SortAlbumsBy = "Custom";
+
+            var ordered = albums.Select(a => new Album() { Id = a.Id, Name = a.Name, Order = a.Order }).ToList();
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    ServiceLocator.DataStore.UpdateAlbumsOrder(ordered);
+                }
+                catch (Exception exception)
+                {
+                    Logger.Log($"Failed to save album order: {exception.Message}");
+                }
+            });
+        }
+
+        /// <summary>
         /// Rebuilds the current video's view model so the pane picks up changed field toggles.
         /// </summary>
         private void RefreshVideoInfo()
@@ -1865,6 +1948,61 @@ namespace Diffusion.Toolkit.Pages
                 var child = VisualTreeHelper.GetChild(depObj, i);
                 if (child is T result) yield return result;
             }
+        }
+
+        private Action? _debounceCollapseNavigation;
+        private bool _navigationAutoCollapsed;
+
+        /// <summary>
+        /// Width of the strip at the left edge that brings an auto-collapsed navigation pane back.
+        /// </summary>
+        private const int NavigationRevealZone = 12;
+
+        private static bool AutoCollapseEnabled => ServiceLocator.ExtendedSettings.AutoCollapseNavigationPane;
+
+        private void NavigationPane_OnMouseEnter(object sender, MouseEventArgs e)
+        {
+            // Cancel a pending collapse by replacing the pending callback's effect
+            _navigationAutoCollapsed = false;
+        }
+
+        private void NavigationPane_OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            if (!AutoCollapseEnabled) return;
+
+            // Only ever hide a pane the user actually has switched on
+            if (_model.MainModel.Settings is not { NavigationSection.ShowSection: true }) return;
+
+            _debounceCollapseNavigation ??= Utility.Debounce(() => Dispatcher.Invoke(CollapseNavigationForHover), 600);
+
+            _debounceCollapseNavigation();
+        }
+
+        private void CollapseNavigationForHover()
+        {
+            if (!AutoCollapseEnabled) return;
+            if (NavigationScrollViewer.IsMouseOver) return;
+            if (_model.MainModel.Settings is not { NavigationSection.ShowSection: true }) return;
+
+            _navigationAutoCollapsed = true;
+
+            SetNavigationVisible(false);
+        }
+
+        /// <summary>
+        /// Brings an auto-collapsed navigation pane back when the pointer returns to the left edge.
+        /// The pane has no width when collapsed, so there is nothing else left to hover.
+        /// </summary>
+        private void MainGrid_OnMouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_navigationAutoCollapsed) return;
+            if (!AutoCollapseEnabled) return;
+
+            if (e.GetPosition(MainGrid).X > NavigationRevealZone) return;
+
+            _navigationAutoCollapsed = false;
+
+            SetNavigationVisible(true);
         }
 
         public void SetNavigationVisible(bool visible)

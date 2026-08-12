@@ -245,6 +245,88 @@ public class MetadataScannerService
 
 
 
+    /// <summary>
+    /// How long to keep waiting for a file that is still being written before giving up on it.
+    /// Long enough for a video encode to flush, short enough not to wedge the queue.
+    /// </summary>
+    private static readonly TimeSpan FileReadyTimeout = TimeSpan.FromSeconds(30);
+
+    private static readonly TimeSpan FileReadyPollInterval = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>
+    /// Waits until a file has stopped growing and its writer has released it.
+    /// </summary>
+    /// <returns>
+    /// False when the file vanished or never settled, in which case it should not be indexed.
+    /// A file deleted while we waited is the normal case for intermediate render passes.
+    /// </returns>
+    private static async Task<bool> WaitForFileReady(string path, CancellationToken token)
+    {
+        var deadline = DateTime.UtcNow + FileReadyTimeout;
+        long lastLength = -1;
+
+        while (true)
+        {
+            if (token.IsCancellationRequested) return false;
+
+            long length;
+
+            try
+            {
+                var info = new FileInfo(path);
+
+                if (!info.Exists) return false;
+
+                length = info.Length;
+            }
+            catch (IOException)
+            {
+                length = -1;
+            }
+
+            // An exclusive open is the reliable signal that whatever produced the file is done
+            if (length > 0 && length == lastLength && CanOpenExclusively(path))
+            {
+                return true;
+            }
+
+            lastLength = length;
+
+            if (DateTime.UtcNow >= deadline)
+            {
+                Logger.Log($"Timed out waiting for {path} to finish being written, skipping it");
+                return false;
+            }
+
+            try
+            {
+                await Task.Delay(FileReadyPollInterval, token);
+            }
+            catch (TaskCanceledException)
+            {
+                return false;
+            }
+        }
+    }
+
+    private static bool CanOpenExclusively(string path)
+    {
+        try
+        {
+            using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None);
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Read-only or permission denied is not the same as still being written
+            return true;
+        }
+    }
+
     private async Task<int> ProcessQueueTaskAsync(CancellationToken token)
     {
         var count = 0;
@@ -255,6 +337,14 @@ public class MetadataScannerService
 
             try
             {
+                // This queue is fed by the folder watchers, so a file may still be being written.
+                // Indexing a half written video stores a broken thumbnail and preview that stick
+                // around until the folder is rescanned, so wait for the writer to let go first.
+                if (!await WaitForFileReady(job.Path, token))
+                {
+                    continue;
+                }
+
                 if (File.Exists(job.Path))
                 {
                     var fileParameters = Metadata.ReadFromFile(job.Path, new ComfyUIParser(ServiceLocator.NodePropertyCache));

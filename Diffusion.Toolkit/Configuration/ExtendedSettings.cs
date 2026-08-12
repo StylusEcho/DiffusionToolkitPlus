@@ -23,6 +23,9 @@ public class ExtendedSettings : SettingsContainer
         InfoOverlayOnRightEdge = false;
         InfoOverlayEdgeWidth = 24;
         QuickAlbumName = "Quick Album";
+        RemoveDeletedFilesFromLibrary = true;
+        AutoCollapseNavigationPane = false;
+        HideRatingsBarWhileVideoPlays = true;
         VideoSectionState = AccordionState.Expanded;
         VideoMetadata = new VideoMetadataSettings();
     }
@@ -69,6 +72,34 @@ public class ExtendedSettings : SettingsContainer
     }
 
     public AccordionState VideoSectionState
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Drop files from the library when they are deleted from disk. ComfyUI removes intermediate
+    /// render passes once the next stage writes its output, and they otherwise linger as dead rows.
+    /// </summary>
+    public bool RemoveDeletedFilesFromLibrary
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Collapse the navigation pane when the pointer moves away from it.
+    /// </summary>
+    public bool AutoCollapseNavigationPane
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// In full screen, hide the ratings bar while a video is playing and show it when paused.
+    /// </summary>
+    public bool HideRatingsBarWhileVideoPlays
     {
         get;
         set => UpdateValue(ref field, value);

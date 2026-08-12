@@ -1,4 +1,5 @@
 using Diffusion.Database;
+using System;
 using System.Windows.Controls;
 using System.Windows;
 using SQLite;
@@ -191,6 +192,8 @@ namespace Diffusion.Toolkit
                 Order = a.Order,
             }).ToList());
 
+            var quickAlbumName = ServiceLocator.ExtendedSettings.QuickAlbumName;
+
             Dispatcher.Invoke(() =>
             {
                 foreach (var album in albums)
@@ -202,21 +205,21 @@ namespace Diffusion.Toolkit
                         album.IsTicked = prevAlbum.IsTicked;
                     }
 
+                    album.IsQuickAlbum = string.Equals(album.Name, quickAlbumName, StringComparison.OrdinalIgnoreCase);
+
                     album.PropertyChanged += Album_PropertyChanged;
                 }
 
-                switch (_settings.SortAlbumsBy)
+                // The quick album is pinned above the rest whichever sort is in effect
+                IEnumerable<AlbumModel> sorted = _settings.SortAlbumsBy switch
                 {
-                    case "Name":
-                        _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.Name));
-                        break;
-                    case "Date":
-                        _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.LastUpdated));
-                        break;
-                    case "Custom":
-                        _model.Albums = new ObservableCollection<AlbumModel>(albums.OrderBy(a => a.Order));
-                        break;
-                }
+                    "Date" => albums.OrderBy(a => a.LastUpdated),
+                    "Custom" => albums.OrderBy(a => a.Order),
+                    _ => albums.OrderBy(a => a.Name)
+                };
+
+                _model.Albums = new ObservableCollection<AlbumModel>(
+                    sorted.OrderByDescending(a => a.IsQuickAlbum));
 
                 ServiceLocator.AlbumService.UpdateSelectedImageAlbums();
             });

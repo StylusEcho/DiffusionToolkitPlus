@@ -150,18 +150,34 @@
                                 </Style.Triggers>
                             </Style>
                         </Grid.Style>
-                        <fa:ImageAwesome Height="48" Icon="TrashOutline" Foreground="{DynamicResource ForegroundBrush}" ToolTip="{lex:Loc RootFolders.Remove}" MouseDown="RemoveRootFolder_OnClick">
-                            <fa:ImageAwesome.Style>
-                                <Style TargetType="fa:ImageAwesome">
-                                    <Setter Property="Opacity" Value="0.2"></Setter>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Opacity" Value="1"></Setter>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </fa:ImageAwesome.Style>
-                        </fa:ImageAwesome>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <fa:ImageAwesome Height="48" Margin="0,0,20,0" Icon="Edit" Foreground="{DynamicResource ForegroundBrush}"
+                                             ToolTip="{lex:Loc Search.Navigation.Folders.ContextMenu.RenameDisplayName}"
+                                             MouseDown="RenameRootFolder_OnClick">
+                                <fa:ImageAwesome.Style>
+                                    <Style TargetType="fa:ImageAwesome">
+                                        <Setter Property="Opacity" Value="0.2"></Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Opacity" Value="1"></Setter>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </fa:ImageAwesome.Style>
+                            </fa:ImageAwesome>
+                            <fa:ImageAwesome Height="48" Icon="TrashOutline" Foreground="{DynamicResource ForegroundBrush}" ToolTip="{lex:Loc RootFolders.Remove}" MouseDown="RemoveRootFolder_OnClick">
+                                <fa:ImageAwesome.Style>
+                                    <Style TargetType="fa:ImageAwesome">
+                                        <Setter Property="Opacity" Value="0.2"></Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Opacity" Value="1"></Setter>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </fa:ImageAwesome.Style>
+                            </fa:ImageAwesome>
+                        </StackPanel>
                     </Grid>
                 </Grid>
 

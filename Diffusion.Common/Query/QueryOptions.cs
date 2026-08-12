@@ -35,6 +35,13 @@ public class QueryOptions
     public bool SearchNodes { get; set; }
     public ComfyQueryOptions ComfyQueryOptions { get; set; }
     public string? Folder { get; set; }
+
+    /// <summary>
+    /// Restricts results to these folders and everything beneath them. Used when folders are
+    /// selected in the sidebar while browsing the whole library, as opposed to
+    /// <see cref="Folder"/>, which is the single folder the folder view has navigated into.
+    /// </summary>
+    public IReadOnlyCollection<string>? FolderPaths { get; set; }
     public bool SearchRawData { get; set; }
     public bool SearchAllProperties { get; set; }
 

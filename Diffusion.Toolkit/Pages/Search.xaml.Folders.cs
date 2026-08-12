@@ -200,7 +200,29 @@ namespace Diffusion.Toolkit.Pages
                     return;
                 }
 
-                if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                var isMultiSelect = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+
+                if (IsFolderFilterView)
+                {
+                    // Outside the folder view, selecting folders narrows the current results
+                    // rather than navigating into them.
+                    if (isMultiSelect)
+                    {
+                        folder.IsSelected = !folder.IsSelected;
+                    }
+                    else
+                    {
+                        // Clicking the only selected folder again clears the filter
+                        var clearFilter = isInSelection && isSingleSelection;
+
+                        ServiceLocator.FolderService.ClearSelection();
+
+                        folder.IsSelected = !clearFilter;
+                    }
+
+                    SearchImages(null);
+                }
+                else if (isMultiSelect)
                 {
                     folder.IsSelected = !folder.IsSelected;
                 }

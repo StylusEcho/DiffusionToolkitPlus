@@ -33,4 +33,14 @@ public class AlbumModel : BaseNotify, IAlbumInfo
         get;
         set => SetField(ref field, value);
     }
+
+    /// <summary>
+    /// True for the album the B shortcut targets. It is pinned to the top of the list and marked
+    /// with an accent diamond.
+    /// </summary>
+    public bool IsQuickAlbum
+    {
+        get;
+        set => SetField(ref field, value);
+    }
 }

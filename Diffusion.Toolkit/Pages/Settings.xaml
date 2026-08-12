@@ -26,8 +26,9 @@
             <!-- Marks a setting that is kept in the sidecar file rather than config.json, so it is
                  invisible to the original Diffusion Toolkit -->
             <Style x:Key="SidecarBadge" TargetType="TextBlock">
-                <Setter Property="Text" Value="📎"></Setter>
-                <Setter Property="FontSize" Value="12"></Setter>
+                <Setter Property="Text" Value="◆"></Setter>
+                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"></Setter>
+                <Setter Property="FontSize" Value="11"></Setter>
                 <Setter Property="Margin" Value="6,0,0,0"></Setter>
                 <Setter Property="VerticalAlignment" Value="Center"></Setter>
                 <Setter Property="Cursor" Value="Help"></Setter>
@@ -178,6 +179,20 @@
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <CheckBox IsChecked="{Binding ExtendedSettings.AutoCollapseNavigationPane, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
+                                          ToolTip="{lex:Loc Settings.General.AutoCollapseNavigation.ToolTip}"
+                                          Content="{lex:Loc Settings.General.AutoCollapseNavigation}"></CheckBox>
+                                <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <CheckBox IsChecked="{Binding ExtendedSettings.RemoveDeletedFilesFromLibrary, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
+                                          ToolTip="{lex:Loc Settings.General.RemoveDeletedFiles.ToolTip}"
+                                          Content="{lex:Loc Settings.General.RemoveDeletedFiles}"></CheckBox>
+                                <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                 <Label VerticalContentAlignment="Center" Padding="0,0,6,0" Content="{lex:Loc Settings.General.QuickAlbumName}"></Label>
                                 <TextBox Width="220" Padding="4"
                                          Text="{Binding ExtendedSettings.QuickAlbumName, RelativeSource={RelativeSource AncestorType=local:NavigationPage}, UpdateSourceTrigger=PropertyChanged}"></TextBox>
@@ -301,6 +316,12 @@
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                         <CheckBox IsChecked="{Binding ExtendedSettings.MuteSidePanelVideo, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
                                   Content="{lex:Loc Settings.Video.MuteSidePanel}"></CheckBox>
+                        <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <CheckBox IsChecked="{Binding ExtendedSettings.HideRatingsBarWhileVideoPlays, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
+                                  Content="{lex:Loc Settings.Video.HideRatingsBarWhilePlaying}"></CheckBox>
                         <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
                     </StackPanel>
 
