@@ -127,15 +127,37 @@ namespace Diffusion.Toolkit.Controls
 
         private void ResetView()
         {
-            if (ServiceLocator.MainModel.FitToPreview)
+            ApplyViewScale();
+        }
+
+        /// <summary>
+        /// Scales the preview to the current view mode. Fit to Preview and Actual Size only apply to
+        /// the popped out viewer - the docked pane is too narrow to browse at actual size, so it
+        /// always fits, and the two toggles leave it alone.
+        /// </summary>
+        private void ApplyViewScale()
+        {
+            if (!IsPopout)
+            {
+                FitToPreview();
+                return;
+            }
+
+            if (ServiceLocator.MainModel is { FitToPreview: true })
             {
                 FitToPreview();
             }
-            if (ServiceLocator.MainModel.ActualSize)
+
+            if (ServiceLocator.MainModel is { ActualSize: true })
             {
                 ActualSize();
             }
         }
+
+        /// <summary>
+        /// True when the preview scales to fit, which the docked pane always does.
+        /// </summary>
+        public bool IsFitToPreview => !IsPopout || ServiceLocator.MainModel is { FitToPreview: true };
 
         public bool IsLoading
         {
@@ -188,15 +210,7 @@ namespace Diffusion.Toolkit.Controls
 
         private void OnSizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (ServiceLocator.MainModel is { FitToPreview: true })
-            {
-                FitToPreview();
-            }
-
-            if (ServiceLocator.MainModel is { ActualSize: true })
-            {
-                ActualSize();
-            }
+            ApplyViewScale();
         }
 
         private void FitToPreview()
@@ -467,19 +481,15 @@ namespace Diffusion.Toolkit.Controls
 
         private void MainModelOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(MainModel.FitToPreview))
+            // Both toggles are popped-out-viewer only, so the docked pane ignores the change
+            if (e.PropertyName is nameof(MainModel.FitToPreview) or nameof(MainModel.ActualSize))
             {
-                if (ServiceLocator.MainModel.FitToPreview)
+                if (IsPopout)
                 {
-                    FitToPreview();
+                    ApplyViewScale();
                 }
-            }
-            if (e.PropertyName == nameof(MainModel.ActualSize))
-            {
-                if (ServiceLocator.MainModel.ActualSize)
-                {
-                    ActualSize();
-                }
+
+                OnPropertyChanged(nameof(IsFitToPreview));
             }
             if (e.PropertyName == nameof(MainModel.ShowTags))
             {

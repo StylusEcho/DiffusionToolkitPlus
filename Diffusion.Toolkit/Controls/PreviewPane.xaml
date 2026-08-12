@@ -30,8 +30,8 @@
             <DataTemplate x:Key="ImageDataTemplate">
                 <ScrollViewer Grid.Row="0"  Grid.RowSpan="3"
                               Loaded="ScrollViewer_OnLoaded"
-                              HorizontalScrollBarVisibility="{Binding MainModel.FitToPreview, Converter={StaticResource scrollBarVisibility}, RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type UserControl}}}" 
-                              VerticalScrollBarVisibility="{Binding MainModel.FitToPreview, Converter={StaticResource scrollBarVisibility}, RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type UserControl}}}"
+                              HorizontalScrollBarVisibility="{Binding IsFitToPreview, Converter={StaticResource scrollBarVisibility}, RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type UserControl}}}"
+                              VerticalScrollBarVisibility="{Binding IsFitToPreview, Converter={StaticResource scrollBarVisibility}, RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type UserControl}}}"
                 >
 
                     <Image 
@@ -81,8 +81,10 @@
             <fa:ImageAwesome Opacity="0.5" Icon="CircleOutlineNotch" Height="60" Spin="True" SpinDuration="1" Foreground="{StaticResource ForegroundBrush}" />
         </Grid>
 
-        <!-- Quick album marker, top left, matching the thumbnail badge -->
+        <!-- Quick album marker, top left, matching the thumbnail badge. The image and video
+             templates are declared after this, so it needs a Z-index to sit in front of them. -->
         <TextBlock Text="◆" FontSize="20" Margin="8,6,0,0"
+                   Panel.ZIndex="100"
                    HorizontalAlignment="Left" VerticalAlignment="Top"
                    IsHitTestVisible="False"
                    Foreground="{DynamicResource AccentBrush}"
