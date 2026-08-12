@@ -676,6 +676,24 @@ namespace Diffusion.Toolkit.Controls
         }
 
         /// <summary>
+        /// Keeps the ratings bar clear of anything the host draws over the pane. The popped out
+        /// viewer has a hit testable strip along the top for its own controls, which would
+        /// otherwise swallow every click and hover meant for the bar.
+        /// </summary>
+        public static readonly DependencyProperty RatingsBarMarginProperty = DependencyProperty.Register(
+            nameof(RatingsBarMargin),
+            typeof(Thickness),
+            typeof(PreviewPane),
+            new PropertyMetadata(new Thickness(0))
+        );
+
+        public Thickness RatingsBarMargin
+        {
+            get => (Thickness)GetValue(RatingsBarMarginProperty);
+            set => SetValue(RatingsBarMarginProperty, value);
+        }
+
+        /// <summary>
         /// The ratings bar follows the "show tags" toggle, and optionally gets out of the way while
         /// a video is actually playing so it doesn't sit over the picture.
         /// </summary>

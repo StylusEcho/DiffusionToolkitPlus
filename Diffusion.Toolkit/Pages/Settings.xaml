@@ -1,4 +1,4 @@
-﻿<local:NavigationPage x:Class="Diffusion.Toolkit.Pages.Settings"
+<local:NavigationPage x:Class="Diffusion.Toolkit.Pages.Settings"
                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -175,13 +175,6 @@
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                 <CheckBox IsChecked="{Binding ExtendedSettings.InfoOverlayOnRightEdge, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
                                           Content="{lex:Loc Settings.General.InfoOverlayOnRightEdge}"></CheckBox>
-                                <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                <CheckBox IsChecked="{Binding ExtendedSettings.AutoCollapseNavigationPane, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
-                                          ToolTip="{lex:Loc Settings.General.AutoCollapseNavigation.ToolTip}"
-                                          Content="{lex:Loc Settings.General.AutoCollapseNavigation}"></CheckBox>
                                 <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
                             </StackPanel>
 
