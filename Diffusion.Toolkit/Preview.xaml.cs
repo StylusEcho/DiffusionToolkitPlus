@@ -81,7 +81,14 @@ namespace Diffusion.Toolkit
             _model.ToggleFitToPreview = mainModel.ToggleFitToPreview;
             _model.ToggleActualSize = mainModel.ToggleActualSize;
             _model.ToggleAutoAdvance = mainModel.ToggleAutoAdvance;
-            _model.ToggleInfo = mainModel.ToggleInfoCommand;
+            // Asking for the overlay pins it open. Only the pane revealed by brushing the right
+            // edge is transient, and that path clears the flag itself.
+            _model.ToggleInfo = new RelayCommand<object>(o =>
+            {
+                _infoOverlayPinned = true;
+                mainModel.ToggleInfoCommand.Execute(o);
+            });
+
             _model.ToggleTagsCommand = mainModel.ToggleTagsCommand;
 
             //_slideShowDelay = mainModel.Settings.SlideShowDelay;
@@ -135,6 +142,13 @@ namespace Diffusion.Toolkit
         private Action _debounceCloseTopBar;
         private Action _debounceCloseBottomBar;
         private Action _debounceCloseInfoOverlay;
+
+        /// <summary>
+        /// True when the overlay was asked for rather than revealed by hovering the right edge.
+        /// A pinned overlay stays put when the pointer leaves it; only a hover-revealed one is
+        /// tidied away again.
+        /// </summary>
+        private bool _infoOverlayPinned;
         private readonly DispatcherTimer _positionTimer;
         private bool _isScrubbing;
         private bool _isTimerUpdate;
@@ -289,19 +303,23 @@ namespace Diffusion.Toolkit
                 _model.IsBottomHover = true;
             }
 
-            var settings = ServiceLocator.ExtendedSettings;
+            if (_model.CurrentImage == null) return;
 
-            if (!settings.InfoOverlayOnRightEdge || _model.CurrentImage == null) return;
-
-            if (IsPointerInInfoOverlayEdge(position))
+            if (ServiceLocator.ExtendedSettings.InfoOverlayOnRightEdge && IsPointerInInfoOverlayEdge(position))
             {
+                // Brushing the edge reveals it, but does not pin it
+                if (!_model.CurrentImage.IsParametersVisible)
+                {
+                    _infoOverlayPinned = false;
+                }
+
                 _model.CurrentImage.IsParametersVisible = true;
             }
             else if (!InfoOverlayPanel.IsMouseOver)
             {
-                // Leaving the overlay itself already schedules the close, but the overlay can be
-                // revealed without the pointer ever entering it - the strip is beside it, not on it -
-                // and then no MouseLeave ever fires. Moving away from the edge has to close it too.
+                // Leaving the overlay itself already schedules the close, but the overlay does not
+                // fill its column - it is top aligned and inset - so the pointer can move off it
+                // without ever raising MouseLeave. Moving away anywhere has to close it too.
                 _debounceCloseInfoOverlay();
             }
         }
@@ -318,11 +336,12 @@ namespace Diffusion.Toolkit
         }
 
         /// <summary>
-        /// Hides the auto-revealed info overlay, unless the pointer has come back to it or to the
-        /// strip that reveals it while the close was pending.
+        /// Hides the info overlay once the pointer has left it, unless it was pinned open, or the
+        /// pointer has come back to it or to the strip that reveals it while the close was pending.
         /// </summary>
         private void CloseInfoOverlayIfPointerAway()
         {
+            if (_infoOverlayPinned) return;
             if (_model.CurrentImage == null) return;
             if (InfoOverlayPanel.IsMouseOver) return;
             if (IsPointerInInfoOverlayEdge(Mouse.GetPosition(this))) return;

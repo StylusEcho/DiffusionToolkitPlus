@@ -188,7 +188,7 @@
   "Metadata.Sampler": "SAMPLER",
   "Metadata.Others": "ANDERE",
   "Metadata.ModelName": "MODELLNAME",
-  "Metadata.ModelHash": "MODELLHASH",
+  "Metadata.ModelHash": "HASH",
   "Metadata.Path": "PFAD",
   "Metadata.Date": "DATUM",
   "Metadata.Modelname.NotFound": "Nicht gefunden",

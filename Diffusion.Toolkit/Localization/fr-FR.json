@@ -188,7 +188,7 @@
   "Metadata.Sampler": "ÉCHANTILLONNEUR",
   "Metadata.Others": "AUTRES",
   "Metadata.ModelName": "NOM DU MODÈLE",
-  "Metadata.ModelHash": "HACHAGE DU MODÈLE",
+  "Metadata.ModelHash": "HACHAGE",
   "Metadata.Path": "CHEMIN",
   "Metadata.Date": "DATE",
   "Metadata.Modelname.NotFound": "Non trouvé",

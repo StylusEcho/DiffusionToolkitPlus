@@ -342,7 +342,7 @@
   "Metadata.Sampler": "SAMPLER",
   "Metadata.Others": "OTHERS",
   "Metadata.ModelName": "MODEL NAME",
-  "Metadata.ModelHash": "MODEL HASH",
+  "Metadata.ModelHash": "HASH",
   "Metadata.Path": "PATH",
   "Metadata.Date": "DATE",
   "Metadata.Modelname.NotFound": "Not found",

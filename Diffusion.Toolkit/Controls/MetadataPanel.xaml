@@ -116,25 +116,24 @@
                                                 Margin="0,0,0,5"
                                                 State="{Binding MetadataSection.ModelState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.ModelName}">
                             <local:AccordionControl.ButtonAreaContent>
+                                <!-- Both columns size to the hash so the name keeps everything
+                                     left of it, and the caption sits over its own value -->
                                 <Grid Background="{x:Null}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition/>
-                                        <ColumnDefinition Width="100"/>
-                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <Label Grid.Column="1" Style="{DynamicResource SmallCaps}" Content="{lex:Loc Metadata.ModelHash}"/>
-                                    <Button Style="{DynamicResource BorderlessButton}" Grid.Column="2" Command="{Binding SearchModelCommand}" Content="{lex:Loc Metadata.Buttons.SearchHash}"/>
+                                    <Label Grid.Column="1" HorizontalAlignment="Right" Style="{DynamicResource SmallCaps}" Content="{lex:Loc Metadata.ModelHash}"/>
                                 </Grid>
                             </local:AccordionControl.ButtonAreaContent>
                             <Grid Background="{x:Null}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition/>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Grid.Column="0" FontSize="14" BorderThickness="0"
                                          IsReadOnly="True" Padding="5" Background="Transparent" TextWrapping="WrapWithOverflow" Text="{Binding ModelName}"/>
-                                <TextBox Grid.Column="1" FontSize="14" BorderThickness="0" IsReadOnly="True" Padding="5" Background="Transparent" Text="{Binding ModelHash}"/>
+                                <TextBox Grid.Column="1" HorizontalAlignment="Right" FontSize="14" BorderThickness="0" IsReadOnly="True" Padding="5" Background="Transparent" Text="{Binding ModelHash}"/>
                             </Grid>
                         </local:AccordionControl>
 
