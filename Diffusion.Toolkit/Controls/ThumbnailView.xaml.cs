@@ -321,7 +321,7 @@ namespace Diffusion.Toolkit.Controls
             if (index >= 0)
             {
                 var wrapPanel = GetChildOfType<WrapPanel>(this)!;
-                if (wrapPanel != null)
+                if (wrapPanel != null && index < wrapPanel.Children.Count)
                 {
                     if (wrapPanel.Children[index] is ListViewItem item)
                     {
@@ -347,7 +347,6 @@ namespace Diffusion.Toolkit.Controls
             var currentItemIndex = -1;
 
             // Get the current item index based on focus
-            // This may be causing issues with page navigation from within the listview
             for (int i = 0; i < wrapPanel.Children.Count; i++)
             {
                 var child = wrapPanel.Children[i];
@@ -356,6 +355,15 @@ namespace Diffusion.Toolkit.Controls
                     currentItemIndex = i;
                     break;
                 }
+            }
+
+            // Anything that takes focus off the grid - a page load replacing the containers, a
+            // click on the preview - would otherwise leave navigation working from a phantom
+            // position for the rest of the session. The selection still knows where we were.
+            if (currentItemIndex == -1 && ThumbnailListView.SelectedIndex >= 0
+                                       && ThumbnailListView.SelectedIndex < wrapPanel.Children.Count)
+            {
+                currentItemIndex = ThumbnailListView.SelectedIndex;
             }
 
             var visibleCount = 0;
@@ -402,29 +410,21 @@ namespace Diffusion.Toolkit.Controls
 
                         switch (delta)
                         {
+                            // The cursor position tells the reload which end of the new page to
+                            // land on, and it places and focuses the selection itself once the
+                            // containers exist. Doing it here as well raced that, against a panel
+                            // still holding the outgoing page's containers.
                             case -1 when currentItemIndex == 0 && !e.IsRepeat:
                                 if (ThumbnailListView.SelectedItems.Count == 1)
                                 {
-                                    GoPrevPage(() =>
-                                    {
-                                        var index = visibleCount - 1;
-                                        SelectedImageEntry = (ImageEntry)ThumbnailListView.Items[^1];
-                                        ThumbnailListView.SelectedItem = SelectedImageEntry;
-                                        wrapPanel.Children[index].Focus();
-                                    }, true);
+                                    GoPrevPage(null, true);
                                     e.Handled = true;
                                 }
                                 return;
                             case 1 when currentItemIndex == visibleCount - 1 && !e.IsRepeat:
                                 if (ThumbnailListView.SelectedItems.Count == 1)
                                 {
-                                    GoNextPage(() =>
-                                    {
-                                        var index = 0;
-                                        SelectedImageEntry = (ImageEntry)ThumbnailListView.Items[0];
-                                        ThumbnailListView.SelectedItem = SelectedImageEntry;
-                                        wrapPanel.Children[index].Focus();
-                                    });
+                                    GoNextPage(null);
                                     e.Handled = true;
                                 }
                                 return;
@@ -449,7 +449,10 @@ namespace Diffusion.Toolkit.Controls
 
                         if (delta != 0)
                         {
-                            if (currentItemIndex + delta < 0 || currentItemIndex + delta >= wrapPanel.Children.Count)
+                            // Bounded by the real entries rather than the containers: the last row
+                            // is padded out with empty ones, and landing on those clears the
+                            // preview and strands the cursor past the end of the results.
+                            if (currentItemIndex + delta < 0 || currentItemIndex + delta >= visibleCount)
                             {
 
                                 e.Handled = true;
@@ -482,7 +485,7 @@ namespace Diffusion.Toolkit.Controls
                             return;
                         }
 
-                        if (currentItemIndex + delta < 0 || currentItemIndex + delta >= wrapPanel.Children.Count)
+                        if (currentItemIndex + delta < 0 || currentItemIndex + delta >= visibleCount)
                         {
                             e.Handled = true;
                             return;

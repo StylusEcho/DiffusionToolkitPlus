@@ -32,6 +32,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Diffusion.ComfyUI;
 using WPFLocalizeExtension.Engine;
 using XmpCore.Impl;
@@ -1346,9 +1347,6 @@ namespace Diffusion.Toolkit.Pages
                                 _ => _model.Images[0]
                             };
 
-
-                            ThumbnailListView.FocusCurrentItem();
-
                             if (options.CursorPosition == CursorPosition.Start)
                             {
                                 ThumbnailListView.ScrollToTop();
@@ -1357,6 +1355,14 @@ namespace Diffusion.Toolkit.Pages
                             {
                                 ThumbnailListView.ScrollToBottom();
                             }
+
+                            // The item containers for the page just loaded do not exist until the
+                            // layout pass runs, so focusing now would land on a container from the
+                            // previous page and lose focus the moment it is replaced - which is how
+                            // arrow key navigation stopped working after crossing a page boundary.
+                            // Scrolling first for the same reason: it moves focus if it comes after.
+                            Dispatcher.BeginInvoke(DispatcherPriority.Loaded,
+                                new Action(() => ThumbnailListView.FocusCurrentItem()));
 
                             //ServiceLocator.MainModel.SelectedImages.Clear();
                             //ServiceLocator.MainModel.SelectedImages.Add(_model.SelectedImageEntry);
