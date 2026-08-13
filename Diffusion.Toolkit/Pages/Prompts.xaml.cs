@@ -235,6 +235,7 @@ namespace Diffusion.Toolkit.Pages
                     FileName = Path.GetFileName(file.Path),
                     NSFW = file.NSFW,
                     AlbumCount = file.AlbumCount,
+                    IsInQuickAlbum = ServiceLocator.AlbumService.IsInQuickAlbum(file.Id),
                     EntryType = EntryType.File
                 };
 
@@ -292,6 +293,7 @@ namespace Diffusion.Toolkit.Pages
                         dest.Path = src.Path;
                         dest.CreatedDate = src.CreatedDate;
                         dest.AlbumCount = src.AlbumCount;
+                        dest.IsInQuickAlbum = src.IsInQuickAlbum;
                         dest.Albums = src.Albums;
                         dest.HasError = src.HasError;
 

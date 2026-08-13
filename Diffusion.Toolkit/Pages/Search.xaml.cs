@@ -571,6 +571,14 @@ namespace Diffusion.Toolkit.Pages
                 _model.MainModel.IsNavigationAutoHideEnabled = AutoHideEnabled;
 
                 ApplyNavigationLayout();
+
+                // Auto-hide means hidden until asked for, including on the very first frame.
+                // Without this the pane starts docked open and only tucks away once the pointer has
+                // been over it, which reads as the setting not having taken effect.
+                if (AutoHideEnabled && _model.MainModel.Settings is { NavigationSection.ShowSection: true })
+                {
+                    CollapseNavigationPane();
+                }
             };
 
             SetNavigationVisible(_model.MainModel.Settings.NavigationSection.ShowSection);
@@ -2030,6 +2038,7 @@ namespace Diffusion.Toolkit.Pages
                     NavigationThumbnailGrid.ColumnDefinitions[2].Width = new GridLength(1, GridUnitType.Star);
 
                     GridSplitter2.Visibility = Visibility.Collapsed;
+                    NavigationPaneEdge.Visibility = Visibility.Visible;
                 }
                 else
                 {
@@ -2039,6 +2048,7 @@ namespace Diffusion.Toolkit.Pages
                     Grid.SetColumnSpan(NavigationPanel, 1);
 
                     GridSplitter2.Visibility = Visibility.Visible;
+                    NavigationPaneEdge.Visibility = Visibility.Collapsed;
 
                     NavigationThumbnailGrid.ColumnDefinitions[0].Width = GetNavigationPaneWidth();
                     NavigationThumbnailGrid.ColumnDefinitions[2].Width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth2);
@@ -2146,6 +2156,15 @@ namespace Diffusion.Toolkit.Pages
 
             if (_model.MainModel.Settings is not { NavigationSection.ShowSection: true }) return;
 
+            CollapseNavigationPane();
+        }
+
+        /// <summary>
+        /// Puts the pane into its hidden state. Kept separate from the hover path so startup and
+        /// MouseLeave cannot drift apart over what "hidden" means.
+        /// </summary>
+        private void CollapseNavigationPane()
+        {
             _navigationAutoCollapsed = true;
 
             NavigationPanel.Visibility = Visibility.Collapsed;

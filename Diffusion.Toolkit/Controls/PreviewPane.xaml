@@ -81,18 +81,18 @@
             <fa:ImageAwesome Opacity="0.5" Icon="CircleOutlineNotch" Height="60" Spin="True" SpinDuration="1" Foreground="{StaticResource ForegroundBrush}" />
         </Grid>
 
-        <!-- Quick album marker, top left, matching the thumbnail badge. The image and video
+        <!-- Quick album bookmark, top left, matching the thumbnail badge. The image and video
              templates are declared after this, so it needs a Z-index to sit in front of them. -->
-        <TextBlock Text="◆" FontSize="20" Margin="8,6,0,0"
+        <fa:ImageAwesome Icon="Bookmark" Height="20" Margin="8,6,0,0"
                    Panel.ZIndex="100"
                    HorizontalAlignment="Left" VerticalAlignment="Top"
                    IsHitTestVisible="False"
                    Foreground="{DynamicResource AccentBrush}"
                    Visibility="{Binding Image.IsInQuickAlbum, Converter={StaticResource boolToVisCol}}">
-            <TextBlock.Effect>
+            <fa:ImageAwesome.Effect>
                 <DropShadowEffect BlurRadius="4" Opacity="0.8" ShadowDepth="2" Direction="-90"></DropShadowEffect>
-            </TextBlock.Effect>
-        </TextBlock>
+            </fa:ImageAwesome.Effect>
+        </fa:ImageAwesome>
 
 
         <Grid  Background="{x:Null}" Visibility="{Binding Image.IsMessageVisible, Converter={StaticResource boolToVis}}">

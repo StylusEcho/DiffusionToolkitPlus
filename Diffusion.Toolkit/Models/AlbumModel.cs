@@ -36,7 +36,7 @@ public class AlbumModel : BaseNotify, IAlbumInfo
 
     /// <summary>
     /// True for the album the B shortcut targets. It is pinned to the top of the list and marked
-    /// with an accent diamond.
+    /// with an accent bookmark.
     /// </summary>
     public bool IsQuickAlbum
     {

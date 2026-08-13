@@ -138,7 +138,7 @@ public class ImageEntry : BaseNotify
     }
 
     /// <summary>
-    /// Drives the accent badge in the corner of the thumbnail.
+    /// Drives the accent bookmark in the bottom right corner of the thumbnail.
     /// </summary>
     public bool IsInQuickAlbum
     {

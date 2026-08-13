@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <None Remove="DiffusionToolkit.log" />
-    <None Remove="Icons\blue-heart-32.png" />
     <None Remove="Icons\copy-32.png" />
     <None Remove="Icons\Dark\copy-32.png" />
     <None Remove="Icons\Dark\favorite-32.png" />
@@ -36,7 +35,6 @@
     <None Remove="Icons\grab.ico" />
     <None Remove="Icons\hand.cur" />
     <None Remove="Icons\hand.ico" />
-    <None Remove="Icons\icons8-blue-heart-48.png" />
     <None Remove="Icons\Light\copy-32.png" />
     <None Remove="Icons\Light\favorite-32.png" />
     <None Remove="Icons\Light\filter-32.png" />
@@ -180,7 +178,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Icons\blue-heart-32.png" />
     <Resource Include="Icons\Dark\copy-32.png" />
     <Resource Include="Icons\Dark\favorite-32.png" />
     <Resource Include="Icons\Dark\filter-32.png" />
@@ -195,7 +192,6 @@
     <Resource Include="Icons\Dark\gallery-32.png" />
     <Resource Include="Icons\grab.cur" />
     <Resource Include="Icons\hand.cur" />
-    <Resource Include="Icons\icons8-blue-heart-48.png" />
     <Resource Include="Icons\Light\copy-32.png" />
     <Resource Include="Icons\Light\favorite-32.png" />
     <Resource Include="Icons\Light\filter-32.png" />
