@@ -50,6 +50,21 @@
             </ContextMenu>
         </Grid.ContextMenu>
 
+        <!-- Copy confirmation. Lives in the panel rather than using the app's toast because the
+             toast popup is anchored to the main window and renders behind the full screen viewer,
+             which is where this panel is most often used. -->
+        <Popup x:Name="CopiedPopup" Placement="MousePoint" AllowsTransparency="True"
+               PopupAnimation="Fade" StaysOpen="True" IsHitTestVisible="False">
+            <Border Background="{DynamicResource ToastBrush}"
+                    BorderBrush="{DynamicResource SecondaryBrush}"
+                    BorderThickness="1" CornerRadius="3" Padding="10,5" Margin="10" Opacity="0.95">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="10" Opacity="0.7" ShadowDepth="3" Direction="-90"/>
+                </Border.Effect>
+                <TextBlock x:Name="CopiedPopupText" Foreground="{DynamicResource ForegroundBrush}"/>
+            </Border>
+        </Popup>
+
         <TabControl Background="Transparent" BorderBrush="{DynamicResource SecondaryBrush}">
             <TabItem Header="Metadata" Background="Transparent" HorizontalContentAlignment="Stretch">
                 <ScrollViewer Background="Transparent" VerticalScrollBarVisibility="Auto">
@@ -69,8 +84,8 @@
                                         <ColumnDefinition Width="80"/>
                                         <ColumnDefinition Width="80"/>
                                     </Grid.ColumnDefinitions>
-                                    <Button Style="{DynamicResource BorderlessButton}" Grid.Column="1" Command="{Binding CopyPromptCommand}" Content="{lex:Loc Metadata.Buttons.Copy}"/>
-                                    <Button Style="{DynamicResource BorderlessButton}" Grid.Column="2" Command="{Binding CopyParametersCommand}" Content="{lex:Loc Metadata.Buttons.CopyAll}"/>
+                                    <Button Style="{DynamicResource BorderlessButton}" Grid.Column="1" Command="{Binding CopyPromptCommand}" Click="Copy_OnClick" Content="{lex:Loc Metadata.Buttons.Copy}"/>
+                                    <Button Style="{DynamicResource BorderlessButton}" Grid.Column="2" Command="{Binding CopyParametersCommand}" Click="Copy_OnClick" Content="{lex:Loc Metadata.Buttons.CopyAll}"/>
                                 </Grid>
                             </local:AccordionControl.ButtonAreaContent>
                             <TextBox Background="#00000000" FontSize="14" BorderThickness="0"
@@ -88,7 +103,7 @@
                                         <ColumnDefinition/>
                                         <ColumnDefinition Width="80"/>
                                     </Grid.ColumnDefinitions>
-                                    <Button Style="{DynamicResource BorderlessButton}" Grid.Column="1" Command="{Binding CopyNegativePromptCommand}" Content="{lex:Loc Metadata.Buttons.Copy}"/>
+                                    <Button Style="{DynamicResource BorderlessButton}" Grid.Column="1" Command="{Binding CopyNegativePromptCommand}" Click="Copy_OnClick" Content="{lex:Loc Metadata.Buttons.Copy}"/>
                                 </Grid>
                             </local:AccordionControl.ButtonAreaContent>
                             <TextBox Background="#00000000" FontSize="14" BorderThickness="0"
@@ -256,7 +271,7 @@
                                         <ColumnDefinition/>
                                         <ColumnDefinition Width="80"/>
                                     </Grid.ColumnDefinitions>
-                                    <Button Style="{DynamicResource BorderlessButton}" Grid.Column="1" Command="{Binding CopyOthersCommand}" Content="{lex:Loc Metadata.Buttons.Copy}"/>
+                                    <Button Style="{DynamicResource BorderlessButton}" Grid.Column="1" Command="{Binding CopyOthersCommand}" Click="Copy_OnClick" Content="{lex:Loc Metadata.Buttons.Copy}"/>
                                 </Grid>
                             </local:AccordionControl.ButtonAreaContent>
                             <TextBox Background="#00000000" FontSize="14" BorderThickness="0"
@@ -276,7 +291,7 @@
                                         <ColumnDefinition Width="80"/>
                                     </Grid.ColumnDefinitions>
                                     <Button Style="{DynamicResource BorderlessButton}" Grid.Column="1" Command="{Binding ShowInExplorerCommand}" Content="{lex:Loc Metadata.Buttons.ShowInExplorer}"/>
-                                    <Button Style="{DynamicResource BorderlessButton}" Grid.Column="2" Command="{Binding CopyPathCommand}" Content="{lex:Loc Metadata.Buttons.Copy}"/>
+                                    <Button Style="{DynamicResource BorderlessButton}" Grid.Column="2" Command="{Binding CopyPathCommand}" Click="Copy_OnClick" Content="{lex:Loc Metadata.Buttons.Copy}"/>
                                 </Grid>
                             </local:AccordionControl.ButtonAreaContent>
                             <TextBox Background="#00000000" FontSize="14" BorderThickness="0"

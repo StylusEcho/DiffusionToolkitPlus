@@ -92,6 +92,35 @@ public class ContextMenuService
     private ImageViewModel CurrentImage => ServiceLocator.MainModel.CurrentImage;
 
 
+    /// <summary>
+    /// Opens Explorer with the current file selected, falling back to opening the containing folder
+    /// when the file itself is gone - the library can outlive the file on disk.
+    /// </summary>
+    public void ShowInExplorer(object obj)
+    {
+        var path = CurrentImage?.Path;
+
+        if (string.IsNullOrEmpty(path)) return;
+
+        var folder = Path.GetDirectoryName(path);
+        var fileExists = File.Exists(path);
+
+        if (!fileExists && !Directory.Exists(folder))
+        {
+            ServiceLocator.ToastService.Toast("The file is no longer available", "");
+            return;
+        }
+
+        var arguments = fileExists ? $"/select,\"{path}\"" : $"\"{folder}\"";
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "explorer.exe",
+            Arguments = arguments,
+            UseShellExecute = true
+        });
+    }
+
     public void CopyPath(object obj)
     {
         if (CurrentImage?.Path == null) return;

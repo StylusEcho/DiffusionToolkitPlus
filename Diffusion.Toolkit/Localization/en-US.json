@@ -330,6 +330,7 @@
   "Metadata.ShowInfo": "Show info (I)",
   "Metadata.Buttons.CopyAll": "Copy All",
   "Metadata.Buttons.Copy": "Copy",
+  "Metadata.Buttons.Copied": "Copied to clipboard",
   "Metadata.Buttons.ShowInExplorer": "Show",
   "Metadata.Buttons.SearchHash": "Search",
   "Metadata.Prompt": "PROMPT",

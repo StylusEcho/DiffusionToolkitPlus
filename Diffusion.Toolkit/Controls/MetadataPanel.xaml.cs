@@ -4,12 +4,16 @@ using Diffusion.Database.Models;
 using Diffusion.Toolkit.Configuration;
 using Diffusion.Toolkit.Models;
 using Diffusion.Toolkit.Services;
+using Diffusion.Toolkit.Localization;
+using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Diffusion.Toolkit.Controls
 {
@@ -86,6 +90,45 @@ namespace Diffusion.Toolkit.Controls
         public MetadataPanel()
         {
             InitializeComponent();
+        }
+
+        private DispatcherTimer? _copiedPopupTimer;
+
+        /// <summary>
+        /// Confirms a copy next to the pointer. Runs alongside the button's own copy command, which
+        /// also raises an application toast - but that toast is anchored to the main window and is
+        /// hidden behind the full screen viewer, where this panel is most often used.
+        /// </summary>
+        private void Copy_OnClick(object sender, RoutedEventArgs e)
+        {
+            CopiedPopupText.Text = GetLocalizedText("Metadata.Buttons.Copied");
+
+            // Reopening moves the popup to the current pointer position
+            CopiedPopup.IsOpen = false;
+            CopiedPopup.IsOpen = true;
+
+            _copiedPopupTimer ??= CreateCopiedPopupTimer();
+
+            _copiedPopupTimer.Stop();
+            _copiedPopupTimer.Start();
+        }
+
+        private static string GetLocalizedText(string key)
+        {
+            return (string)JsonLocalizationProvider.Instance.GetLocalizedObject(key, null, CultureInfo.InvariantCulture);
+        }
+
+        private DispatcherTimer CreateCopiedPopupTimer()
+        {
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                CopiedPopup.IsOpen = false;
+            };
+
+            return timer;
         }
 
         private void CollapseAll_Click(object sender, RoutedEventArgs e)

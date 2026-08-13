@@ -27,7 +27,7 @@ public class ImageViewModel : BaseNotify
         //_model.CurrentImage.CopyHash = new RelayCommand<object>(CopyHash);
         CopyOthersCommand = new RelayCommand<object>(ServiceLocator.ContextMenuService.CopyOthers);
         CopyParametersCommand = new RelayCommand<object>(ServiceLocator.ContextMenuService.CopyParameters);
-        //ShowInExplorerCommand = new RelayCommand<object>(ServiceLocator.ContextMenuService.ShowInExplorer);
+        ShowInExplorerCommand = new RelayCommand<object>(ServiceLocator.ContextMenuService.ShowInExplorer);
     }
 
     public MainModel MainModel => ServiceLocator.MainModel;
