@@ -434,7 +434,7 @@
   "RootFolders.WatchForUpdates": "Watch for updates",
   "RootFolders.ScanRecursively": "Scan recursively",
   "RootFolders.Count": "{0:n0} images",
-  "Metadata.Video": "Video",
+  "Metadata.Video": "VIDEO",
   "Metadata.Video.Resolution": "Resolution",
   "Metadata.Video.Length": "Length",
   "Metadata.Video.FrameRate": "Frame Rate",

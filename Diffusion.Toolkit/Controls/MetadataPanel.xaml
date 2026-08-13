@@ -174,9 +174,12 @@
 
                         <!-- Video details, read from the file on demand. Hidden entirely for stills,
                              and each row hides itself when the value is unavailable or switched off. -->
+                        <!-- FallbackValue matters: a still has no VideoInfo at all, so the path
+                             cannot resolve, and without it Visibility falls back to its own default
+                             of Visible and an empty Video section appears on images. -->
                         <local:AccordionControl x:Name="VideoMetadata"
                                                 Margin="0,0,0,5"
-                                                Visibility="{Binding VideoInfo.HasAny, Converter={StaticResource boolToVisCol}}"
+                                                Visibility="{Binding VideoInfo.HasAny, Converter={StaticResource boolToVisCol}, FallbackValue=Collapsed, TargetNullValue=Collapsed}"
                                                 State="{Binding ExtendedSettings.VideoSectionState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}"
                                                 HeaderBackground="#80000000" Header="{lex:Loc Metadata.Video}">
                             <StackPanel Background="{x:Null}" DataContext="{Binding VideoInfo}">

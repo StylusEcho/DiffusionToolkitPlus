@@ -114,13 +114,9 @@ namespace Diffusion.Toolkit
                 _model.IsBottomHover = false;
             }, 2000);
 
-            _debounceCloseInfoOverlay = Utility.Debounce(() =>
-            {
-                if (_model.CurrentImage != null)
-                {
-                    _model.CurrentImage.IsParametersVisible = false;
-                }
-            }, 2000);
+            // Utility.Debounce continues on TaskScheduler.Default, so this has to marshal back -
+            // it reads the overlay's hover state and the pointer position, which are UI-thread only
+            _debounceCloseInfoOverlay = Utility.Debounce(() => Dispatcher.Invoke(CloseInfoOverlayIfPointerAway), 2000);
 
             _positionTimer = new DispatcherTimer(DispatcherPriority.Background)
             {
@@ -291,15 +287,43 @@ namespace Diffusion.Toolkit
 
             var settings = ServiceLocator.ExtendedSettings;
 
-            // A very narrow strip is near impossible to land on, so enforce a usable minimum
-            var edgeWidth = Math.Max(16, settings.InfoOverlayEdgeWidth);
+            if (!settings.InfoOverlayOnRightEdge || _model.CurrentImage == null) return;
 
-            if (settings.InfoOverlayOnRightEdge
-                && _model.CurrentImage != null
-                && position.X >= ActualWidth - edgeWidth)
+            if (IsPointerInInfoOverlayEdge(position))
             {
                 _model.CurrentImage.IsParametersVisible = true;
             }
+            else if (!InfoOverlayPanel.IsMouseOver)
+            {
+                // Leaving the overlay itself already schedules the close, but the overlay can be
+                // revealed without the pointer ever entering it - the strip is beside it, not on it -
+                // and then no MouseLeave ever fires. Moving away from the edge has to close it too.
+                _debounceCloseInfoOverlay();
+            }
+        }
+
+        /// <summary>
+        /// True when the pointer is in the strip at the right edge that reveals the info overlay.
+        /// A very narrow strip is near impossible to land on, so a usable minimum is enforced.
+        /// </summary>
+        private bool IsPointerInInfoOverlayEdge(Point position)
+        {
+            var edgeWidth = Math.Max(16, ServiceLocator.ExtendedSettings.InfoOverlayEdgeWidth);
+
+            return position.X >= ActualWidth - edgeWidth;
+        }
+
+        /// <summary>
+        /// Hides the auto-revealed info overlay, unless the pointer has come back to it or to the
+        /// strip that reveals it while the close was pending.
+        /// </summary>
+        private void CloseInfoOverlayIfPointerAway()
+        {
+            if (_model.CurrentImage == null) return;
+            if (InfoOverlayPanel.IsMouseOver) return;
+            if (IsPointerInInfoOverlayEdge(Mouse.GetPosition(this))) return;
+
+            _model.CurrentImage.IsParametersVisible = false;
         }
 
         private const int BottomHoverZone = 80;
