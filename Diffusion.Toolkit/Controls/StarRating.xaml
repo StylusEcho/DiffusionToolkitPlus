@@ -8,7 +8,8 @@
              xmlns:converters="clr-namespace:Diffusion.Toolkit.Converters"
              xmlns:system="clr-namespace:System;assembly=System.Runtime"
              xmlns:common="clr-namespace:Diffusion.Toolkit.Common"
-             mc:Ignorable="d" 
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
+             mc:Ignorable="d"
             
              d:DesignHeight="60" d:DesignWidth="480">
     <UserControl.Resources>
@@ -345,12 +346,14 @@
         </Grid>
 
 
-        <Image Grid.Column="2" Source="../Icons/blue-heart-32.png" PreviewMouseDown="Favorite_OnMouseDown" DataContext="{StaticResource ImageProxy}">
-            <Image.Effect>
+        <fa:ImageAwesome Grid.Column="2" Icon="Heart" Foreground="{DynamicResource FavoriteBrush}"
+                         Height="24" Width="24"
+                         PreviewMouseDown="Favorite_OnMouseDown" DataContext="{StaticResource ImageProxy}">
+            <fa:ImageAwesome.Effect>
                 <DropShadowEffect BlurRadius="5" Opacity="0.8" ShadowDepth="2" Direction="-90" RenderingBias="Quality" />
-            </Image.Effect>
-            <Image.Resources>
-                <Style TargetType="Image" BasedOn="{StaticResource TagIcon}">
+            </fa:ImageAwesome.Effect>
+            <fa:ImageAwesome.Resources>
+                <Style TargetType="fa:ImageAwesome">
                     <Setter Property="Opacity" Value="0.5"></Setter>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding Data.Favorite}" Value="True">
@@ -361,8 +364,8 @@
                         </Trigger>
                     </Style.Triggers>
                 </Style>
-            </Image.Resources>
-        </Image>
+            </fa:ImageAwesome.Resources>
+        </fa:ImageAwesome>
 
 
         <Image Grid.Column="3" Source="../Icons/Dark/trash-solid-32.png" PreviewMouseDown="Delete_OnMouseDown" DataContext="{StaticResource ImageProxy}">

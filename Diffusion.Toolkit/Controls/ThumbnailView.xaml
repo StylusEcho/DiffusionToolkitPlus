@@ -243,16 +243,11 @@
                             </BlurEffect>
                         </local:Thumbnail.Effect>
                     </local:Thumbnail>
-                    <Grid Background="{x:Null}">
-                        <Grid.RowDefinitions>
-                            <RowDefinition/>
-                            <RowDefinition Height="32"/>
-                        </Grid.RowDefinitions>
-                        <local:ThumbnailIcons Grid.Row="1"
+                    <!-- Spans the whole thumbnail so badges can be pinned to individual corners -->
+                    <local:ThumbnailIcons
                         Data="{Binding .}"
-                        Height="32"
+                        IsHitTestVisible="False"
                         ></local:ThumbnailIcons>
-                    </Grid>
                     <Label Grid.Row="1" Foreground="{DynamicResource ForegroundBrush}"  HorizontalContentAlignment="Center">
                         <Label.Style>
                             <Style TargetType="Label">
@@ -301,16 +296,15 @@
                             </BlurEffect>
                         </local:Thumbnail.Effect>
                     </local:Thumbnail>
-                    <Grid Background="{x:Null}">
-                        <Grid.RowDefinitions>
-                            <RowDefinition/>
-                            <RowDefinition Height="32"/>
-                        </Grid.RowDefinitions>
-                        <local:ThumbnailIcons Grid.Row="1"
-                                              Data="{Binding .}"
-                                              Height="32"
+                    <!-- Tracks the thumbnail's own size so the corner badges land on its edges,
+                         rather than the row's, which is taller than the image in compact view -->
+                    <local:ThumbnailIcons
+                        Data="{Binding .}"
+                        Height="{Binding ThumbnailHeight}"
+                        Width="{Binding ThumbnailWidth}"
+                        VerticalAlignment="Top"
+                        IsHitTestVisible="False"
                         ></local:ThumbnailIcons>
-                    </Grid>
                     <Label Grid.Row="1" Foreground="{DynamicResource ForegroundBrush}"  HorizontalContentAlignment="Center" >
                         <Label.Style>
                             <Style TargetType="Label">

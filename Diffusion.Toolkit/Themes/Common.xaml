@@ -20,6 +20,10 @@
     <SolidColorBrush x:Key="DisabledBackgroundBrush" Color="{DynamicResource DisabledBackground}"/>
     <SolidColorBrush x:Key="PreviewBackgroundBrush" Color="{DynamicResource PreviewBackground}"/>
 
+    <!-- The favourite heart reads as red in either theme, so it is not split like the rest -->
+    <Color x:Key="Favorite">#E53935</Color>
+    <SolidColorBrush x:Key="FavoriteBrush" Color="{DynamicResource Favorite}"/>
+
 
 
     <Style TargetType="Grid">

@@ -223,6 +223,10 @@ namespace Diffusion.Toolkit
 
         private void ToggleMute()
         {
+            // Nothing to mute on a still image, and flipping the flag there would silently change
+            // what the next video does
+            if (!PreviewPane.HasPlayer) return;
+
             PreviewPane.ToggleMute();
             _model.IsMuted = PreviewPane.IsMuted;
         }

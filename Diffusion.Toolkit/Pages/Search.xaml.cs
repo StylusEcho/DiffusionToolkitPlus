@@ -32,6 +32,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Diffusion.ComfyUI;
 using WPFLocalizeExtension.Engine;
 using XmpCore.Impl;
@@ -571,6 +572,14 @@ namespace Diffusion.Toolkit.Pages
                 _model.MainModel.IsNavigationAutoHideEnabled = AutoHideEnabled;
 
                 ApplyNavigationLayout();
+
+                // Auto-hide means hidden until asked for, including on the very first frame.
+                // Without this the pane starts docked open and only tucks away once the pointer has
+                // been over it, which reads as the setting not having taken effect.
+                if (AutoHideEnabled && _model.MainModel.Settings is { NavigationSection.ShowSection: true })
+                {
+                    CollapseNavigationPane();
+                }
             };
 
             SetNavigationVisible(_model.MainModel.Settings.NavigationSection.ShowSection);
@@ -1338,9 +1347,6 @@ namespace Diffusion.Toolkit.Pages
                                 _ => _model.Images[0]
                             };
 
-
-                            ThumbnailListView.FocusCurrentItem();
-
                             if (options.CursorPosition == CursorPosition.Start)
                             {
                                 ThumbnailListView.ScrollToTop();
@@ -1349,6 +1355,14 @@ namespace Diffusion.Toolkit.Pages
                             {
                                 ThumbnailListView.ScrollToBottom();
                             }
+
+                            // The item containers for the page just loaded do not exist until the
+                            // layout pass runs, so focusing now would land on a container from the
+                            // previous page and lose focus the moment it is replaced - which is how
+                            // arrow key navigation stopped working after crossing a page boundary.
+                            // Scrolling first for the same reason: it moves focus if it comes after.
+                            Dispatcher.BeginInvoke(DispatcherPriority.Loaded,
+                                new Action(() => ThumbnailListView.FocusCurrentItem()));
 
                             //ServiceLocator.MainModel.SelectedImages.Clear();
                             //ServiceLocator.MainModel.SelectedImages.Add(_model.SelectedImageEntry);
@@ -2030,6 +2044,7 @@ namespace Diffusion.Toolkit.Pages
                     NavigationThumbnailGrid.ColumnDefinitions[2].Width = new GridLength(1, GridUnitType.Star);
 
                     GridSplitter2.Visibility = Visibility.Collapsed;
+                    NavigationPaneEdge.Visibility = Visibility.Visible;
                 }
                 else
                 {
@@ -2039,6 +2054,7 @@ namespace Diffusion.Toolkit.Pages
                     Grid.SetColumnSpan(NavigationPanel, 1);
 
                     GridSplitter2.Visibility = Visibility.Visible;
+                    NavigationPaneEdge.Visibility = Visibility.Collapsed;
 
                     NavigationThumbnailGrid.ColumnDefinitions[0].Width = GetNavigationPaneWidth();
                     NavigationThumbnailGrid.ColumnDefinitions[2].Width = GetGridLength(ServiceLocator.Settings.NavigationThumbnailGridWidth2);
@@ -2146,6 +2162,15 @@ namespace Diffusion.Toolkit.Pages
 
             if (_model.MainModel.Settings is not { NavigationSection.ShowSection: true }) return;
 
+            CollapseNavigationPane();
+        }
+
+        /// <summary>
+        /// Puts the pane into its hidden state. Kept separate from the hover path so startup and
+        /// MouseLeave cannot drift apart over what "hidden" means.
+        /// </summary>
+        private void CollapseNavigationPane()
+        {
             _navigationAutoCollapsed = true;
 
             NavigationPanel.Visibility = Visibility.Collapsed;
@@ -2284,7 +2309,15 @@ namespace Diffusion.Toolkit.Pages
 
         public void Update(int id)
         {
+            // The results are padded out with empty entries, and the folder separator is one too.
+            // All of them sit at id 0, so an id of 0 finds a row here that has no database record
+            // behind it.
+            if (id <= 0) return;
+
             var imageData = ServiceLocator.DataStore.GetImage(id);
+
+            if (imageData == null) return;
+
             var image = _model.Images.FirstOrDefault(i => i.Id == id);
 
             if (image != null)
