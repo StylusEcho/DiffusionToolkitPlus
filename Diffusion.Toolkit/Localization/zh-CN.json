@@ -381,7 +381,7 @@
   "Metadata.Sampler": "采样器",
   "Metadata.Others": "其他",
   "Metadata.ModelName": "模型名称",
-  "Metadata.ModelHash": "模型哈希",
+  "Metadata.ModelHash": "哈希",
   "Metadata.Path": "路径",
   "Metadata.Date": "日期",
   "Metadata.Modelname.NotFound": "未找到",

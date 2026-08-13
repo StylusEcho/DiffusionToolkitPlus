@@ -338,7 +338,7 @@
   "Metadata.Sampler": "СЕМПЛЕР",
   "Metadata.Others": "ІНШЕ",
   "Metadata.ModelName": "НАЗВА МОДЕЛІ",
-  "Metadata.ModelHash": "ХЕШ МОДЕЛІ",
+  "Metadata.ModelHash": "ХЕШ",
   "Metadata.Path": "ШЛЯХ",
   "Metadata.Date": "ДАТА",
   "Metadata.Modelname.NotFound": "Не знайдено",

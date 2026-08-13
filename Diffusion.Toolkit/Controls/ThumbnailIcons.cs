@@ -202,6 +202,11 @@ public class ThumbnailIcons : FrameworkElement
 
         const int iconSize = 24;
 
+        // The quick album and favourite badges read as state rather than type, and carry better
+        // at three quarters the size
+        const int smallIconSize = 18;
+        const double smallInset = (iconSize - smallIconSize) / 2.0;
+
         // The badges overlap by 2px, which is how the row has always looked
         const int xOffset = 22;
 
@@ -217,7 +222,23 @@ public class ThumbnailIcons : FrameworkElement
         // Quick album sits alone in the bottom right, clear of the row
         if (Data.IsInQuickAlbum)
         {
-            drawingContext.DrawImage(BookmarkIcon, new Rect(new Point(right, bottom), new Size(iconSize, iconSize)));
+            drawingContext.DrawImage(BookmarkIcon,
+                new Rect(new Point(ActualWidth - smallIconSize, ActualHeight - smallIconSize),
+                    new Size(smallIconSize, smallIconSize)));
+        }
+
+        // Video marks what the entry is, so it leads in the top left rather than joining the
+        // status row along the bottom
+        if (Data.Type == ImageType.Video)
+        {
+            if (ThemeManager.CurrentTheme == "Dark")
+            {
+                drawingContext.DrawImage(_darkVideoIcon, new Rect(new Point(0, 0), new Size(iconSize, iconSize)));
+            }
+            else if (ThemeManager.CurrentTheme == "Light")
+            {
+                drawingContext.DrawImage(_lightVideoIcon, new Rect(new Point(0, 0), new Size(iconSize, iconSize)));
+            }
         }
 
         //if (Data.ForDeletion)
@@ -238,20 +259,6 @@ public class ThumbnailIcons : FrameworkElement
             x += xOffset;
         }
 
-
-
-        if (Data.Type == ImageType.Video)
-        {
-            if (ThemeManager.CurrentTheme == "Dark")
-            {
-                drawingContext.DrawImage(_darkVideoIcon, new Rect(new Point(x, y), new Size(24, 24)));
-            }
-            else if (ThemeManager.CurrentTheme == "Light")
-            {
-                drawingContext.DrawImage(_lightVideoIcon, new Rect(new Point(x, y), new Size(24, 24)));
-            }
-            x += xOffset;
-        }
 
 
         // NSFW is pinned to the top right, away from the row
@@ -284,7 +291,11 @@ public class ThumbnailIcons : FrameworkElement
 
         if (Data.Favorite)
         {
-            drawingContext.DrawImage(HeartIcon, new Rect(new Point(x, y), new Size(iconSize, iconSize)));
+            // Smaller, but sitting on the row's baseline and keeping its full slot so the rating
+            // beside it does not shift
+            drawingContext.DrawImage(HeartIcon,
+                new Rect(new Point(x + smallInset, y + (iconSize - smallIconSize)),
+                    new Size(smallIconSize, smallIconSize)));
             x += xOffset;
         }
 

@@ -187,7 +187,7 @@
   "Metadata.Size": "サイズ",
   "Metadata.Others": "その他",
   "Metadata.ModelName": "モデル名",
-  "Metadata.ModelHash": "モデルハッシュ",
+  "Metadata.ModelHash": "ハッシュ",
   "Metadata.Path": "パス",
   "Metadata.Date": "日付",
   "Metadata.Modelname.NotFound": "見つかりません",

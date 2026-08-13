@@ -188,7 +188,7 @@
   "Metadata.Sampler": "MUESTREADOR",
   "Metadata.Others": "OTROS",
   "Metadata.ModelName": "NOMBRE DEL MODELO",
-  "Metadata.ModelHash": "HASH DEL MODELO",
+  "Metadata.ModelHash": "HASH",
   "Metadata.Path": "RUTA",
   "Metadata.Date": "FECHA",
   "Metadata.Modelname.NotFound": "No encontrado",
