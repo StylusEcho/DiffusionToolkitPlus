@@ -2303,7 +2303,15 @@ namespace Diffusion.Toolkit.Pages
 
         public void Update(int id)
         {
+            // The results are padded out with empty entries, and the folder separator is one too.
+            // All of them sit at id 0, so an id of 0 finds a row here that has no database record
+            // behind it.
+            if (id <= 0) return;
+
             var imageData = ServiceLocator.DataStore.GetImage(id);
+
+            if (imageData == null) return;
+
             var image = _model.Images.FirstOrDefault(i => i.Id == id);
 
             if (image != null)

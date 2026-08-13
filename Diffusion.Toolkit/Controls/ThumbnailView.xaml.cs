@@ -493,123 +493,142 @@ namespace Diffusion.Toolkit.Controls
             }
         }
 
+        /// <summary>
+        /// The files in the selection that can actually be marked. Results are padded out with
+        /// empty entries and can include a folder separator, neither of which is a file; and a
+        /// file whose drive has since gone away cannot be tagged. Rather than fail the whole
+        /// action, drop those and say how many were left out.
+        /// </summary>
+        private List<ImageEntry> GetMarkableSelection()
+        {
+            if (ThumbnailListView.SelectedItems == null) return new List<ImageEntry>();
+
+            var files = ThumbnailListView.SelectedItems.Cast<ImageEntry>()
+                .Where(d => d is { IsEmpty: false, EntryType: EntryType.File } && d.Id > 0)
+                .ToList();
+
+            var markable = files.Where(d => !d.Unavailable).ToList();
+
+            var skipped = files.Count - markable.Count;
+
+            if (skipped > 0)
+            {
+                ServiceLocator.ToastService.Toast(
+                    GetLocalizedText("Actions.Tagging.Skipped").Replace("{images}", $"{skipped}"), "");
+            }
+
+            return markable;
+        }
+
         private void RateSelected(int rating)
         {
-            if (ThumbnailListView.SelectedItems != null)
+            var imageEntries = GetMarkableSelection();
+
+            if (!imageEntries.Any()) return;
+
+            //int? effectiveRating = rating;
+
+            //if (imageEntries.Count(i => i.Rating == rating) > imageEntries.Count / 2)
+            //{
+            //    effectiveRating = null;
+            //}
+
+            foreach (var entry in imageEntries)
             {
-                var imageEntries = ThumbnailListView.SelectedItems.Cast<ImageEntry>().ToList();
+                entry.Rating = rating;
 
-                //int? effectiveRating = rating;
-
-                //if (imageEntries.Count(i => i.Rating == rating) > imageEntries.Count / 2)
-                //{
-                //    effectiveRating = null;
-                //}
-
-                foreach (var entry in imageEntries)
+                if (Model.CurrentImage != null && Model.CurrentImage.Path == entry.Path)
                 {
-                    entry.Rating = rating;
-
-                    if (Model.CurrentImage != null && Model.CurrentImage.Path == entry.Path)
-                    {
-                        Model.CurrentImage.Rating = entry.Rating;
-                    }
+                    Model.CurrentImage.Rating = entry.Rating;
                 }
+            }
 
-                var ids = imageEntries.Select(x => x.Id).ToList();
+            var ids = imageEntries.Select(x => x.Id).ToList();
 
-                _dataStore.SetRating(ids, rating);
+            _dataStore.SetRating(ids, rating);
 
-                if (imageEntries.Count == 1)
-                {
-                    AdvanceOnTag();
-                }
+            if (imageEntries.Count == 1)
+            {
+                AdvanceOnTag();
             }
         }
 
         private void UnrateSelected()
         {
-            if (ThumbnailListView.SelectedItems != null)
+            var imageEntries = GetMarkableSelection();
+
+            if (!imageEntries.Any()) return;
+
+            foreach (var entry in imageEntries)
             {
-                var imageEntries = ThumbnailListView.SelectedItems.Cast<ImageEntry>().ToList();
 
-                foreach (var entry in imageEntries)
+                entry.Rating = null;
+
+                if (Model.CurrentImage != null && Model.CurrentImage.Path == entry.Path)
                 {
-
-                    entry.Rating = null;
-
-                    if (Model.CurrentImage != null && Model.CurrentImage.Path == entry.Path)
-                    {
-                        Model.CurrentImage.Rating = entry.Rating;
-                    }
+                    Model.CurrentImage.Rating = entry.Rating;
                 }
+            }
 
-                var ids = imageEntries.Select(x => x.Id).ToList();
+            var ids = imageEntries.Select(x => x.Id).ToList();
 
-                _dataStore.SetRating(ids, null);
+            _dataStore.SetRating(ids, null);
 
-                if (imageEntries.Count == 1)
-                {
-                    AdvanceOnTag();
-                }
+            if (imageEntries.Count == 1)
+            {
+                AdvanceOnTag();
             }
         }
 
         private void FavoriteSelected()
         {
-            if (ThumbnailListView.SelectedItems != null)
+            var imageEntries = GetMarkableSelection();
+
+            if (!imageEntries.Any()) return;
+
+            var favorite = !imageEntries.GroupBy(e => e.Favorite).OrderByDescending(g => g.Count()).First().Key;
+
+            foreach (var entry in imageEntries)
             {
-                var imageEntries = ThumbnailListView.SelectedItems.Cast<ImageEntry>().ToList();
-
-                if (!imageEntries.Any()) return;
-
-                var favorite = !imageEntries.GroupBy(e => e.Favorite).OrderByDescending(g => g.Count()).First().Key;
-
-                foreach (var entry in imageEntries)
+                entry.Favorite = favorite;
+                if (Model.CurrentImage != null && Model.CurrentImage.Path == entry.Path)
                 {
-                    entry.Favorite = favorite;
-                    if (Model.CurrentImage != null && Model.CurrentImage.Path == entry.Path)
-                    {
-                        Model.CurrentImage.Favorite = favorite;
-                    }
+                    Model.CurrentImage.Favorite = favorite;
                 }
+            }
 
-                var ids = imageEntries.Select(x => x.Id).ToList();
-                _dataStore.SetFavorite(ids, favorite);
+            var ids = imageEntries.Select(x => x.Id).ToList();
+            _dataStore.SetFavorite(ids, favorite);
 
-                if (imageEntries.Count == 1)
-                {
-                    AdvanceOnTag();
-                }
+            if (imageEntries.Count == 1)
+            {
+                AdvanceOnTag();
             }
         }
 
         private void NSFWSelected()
         {
-            if (ThumbnailListView.SelectedItems != null)
+            var imageEntries = GetMarkableSelection();
+
+            if (!imageEntries.Any()) return;
+
+            var nsfw = !imageEntries.GroupBy(e => e.NSFW).OrderByDescending(g => g.Count()).First().Key;
+
+            foreach (var entry in imageEntries)
             {
-                var imageEntries = ThumbnailListView.SelectedItems.Cast<ImageEntry>().ToList();
-
-                if (!imageEntries.Any()) return;
-
-                var nsfw = !imageEntries.GroupBy(e => e.NSFW).OrderByDescending(g => g.Count()).First().Key;
-
-                foreach (var entry in imageEntries)
+                entry.NSFW = nsfw;
+                if (Model.CurrentImage != null && Model.CurrentImage.Path == entry.Path)
                 {
-                    entry.NSFW = nsfw;
-                    if (Model.CurrentImage != null && Model.CurrentImage.Path == entry.Path)
-                    {
-                        Model.CurrentImage.NSFW = nsfw;
-                    }
+                    Model.CurrentImage.NSFW = nsfw;
                 }
+            }
 
-                var ids = imageEntries.Select(x => x.Id).ToList();
-                _dataStore.SetNSFW(ids, nsfw);
+            var ids = imageEntries.Select(x => x.Id).ToList();
+            _dataStore.SetNSFW(ids, nsfw);
 
-                if (imageEntries.Count == 1)
-                {
-                    AdvanceOnTag();
-                }
+            if (imageEntries.Count == 1)
+            {
+                AdvanceOnTag();
             }
         }
 
@@ -712,28 +731,27 @@ namespace Diffusion.Toolkit.Controls
 
         private void DeleteSelected()
         {
-            if (ThumbnailListView.SelectedItems != null && ThumbnailListView.SelectedItems.Count > 0)
+            var imageEntries = GetMarkableSelection();
+
+            if (!imageEntries.Any()) return;
+
+            var delete = !imageEntries.GroupBy(e => e.ForDeletion).OrderByDescending(g => g.Count()).First().Key;
+
+            foreach (var entry in imageEntries)
             {
-                var imageEntries = ThumbnailListView.SelectedItems.Cast<ImageEntry>().ToList();
-
-                var delete = !imageEntries.GroupBy(e => e.ForDeletion).OrderByDescending(g => g.Count()).First().Key;
-
-                foreach (var entry in imageEntries)
+                entry.ForDeletion = delete;
+                if (Model.CurrentImage != null && Model.CurrentImage.Path == entry.Path)
                 {
-                    entry.ForDeletion = delete;
-                    if (Model.CurrentImage != null && Model.CurrentImage.Path == entry.Path)
-                    {
-                        Model.CurrentImage.ForDeletion = delete;
-                    }
+                    Model.CurrentImage.ForDeletion = delete;
                 }
+            }
 
-                var ids = imageEntries.Select(x => x.Id).ToList();
-                _dataStore.SetDeleted(ids, delete);
+            var ids = imageEntries.Select(x => x.Id).ToList();
+            _dataStore.SetDeleted(ids, delete);
 
-                if (imageEntries.Count == 1)
-                {
-                    AdvanceOnTag();
-                }
+            if (imageEntries.Count == 1)
+            {
+                AdvanceOnTag();
             }
         }
 

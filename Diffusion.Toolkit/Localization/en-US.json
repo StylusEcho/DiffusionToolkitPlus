@@ -401,6 +401,8 @@
   "Menu.View.ToggleQuickAlbum": "Add/Remove from Quick Album",
   "Actions.Albums.QuickAlbum.Title": "Quick Album",
   "Actions.Albums.QuickAlbum.Added": "{images} added to \"{album}\"",
+  "Actions.Tagging.Unavailable": "This file is no longer available",
+  "Actions.Tagging.Skipped": "{images} unavailable file(s) were skipped",
   "Actions.Albums.QuickAlbum.Removed": "{images} removed from \"{album}\"",
   "Settings.SidecarSetting.ToolTip": "📎 Stored in config.extended.json, not config.json. This setting only exists in this build - the original Diffusion Toolkit ignores it, and it is never written to the database.",
   "Settings.General.InfoOverlayOnRightEdge": "Show info overlay when the cursor reaches the right edge (full screen)",
