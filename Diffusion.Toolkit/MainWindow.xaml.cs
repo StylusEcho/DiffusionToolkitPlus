@@ -1118,7 +1118,7 @@ namespace Diffusion.Toolkit
         {
             ServiceLocator.ExtendedSettings.SettingChanged += (_, args) =>
             {
-                if (args.SettingName != nameof(ExtendedSettings.AccentColor)) return;
+                if (args.SettingName != nameof(Configuration.ExtendedSettings.AccentColor)) return;
 
                 Dispatcher.Invoke(() => ThemeManager.ApplyAccentOverride());
             };
