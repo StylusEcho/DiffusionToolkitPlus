@@ -879,18 +879,18 @@ namespace Diffusion.Toolkit
             // Albums, queries, tags and the model list are independent of each other and are
             // all loaded off the UI thread, so start them together and let them overlap
             // instead of blocking the window one after the other.
-            var albumsTask = TrackLibraryLoad(LoadAlbums(), "Main.Status.Loading.Albums");
-            var queriesTask = TrackLibraryLoad(LoadQueries(), "Main.Status.Loading.Queries");
-            var tagsTask = TrackLibraryLoad(LoadTags(), "Main.Status.Loading.Tags");
-            var modelsTask = TrackLibraryLoad(LoadModels(), "Main.Status.Loading.Models");
+            var albumsTask = TrackLibraryLoad(LoadAlbums());
+            var queriesTask = TrackLibraryLoad(LoadQueries());
+            var tagsTask = TrackLibraryLoad(LoadTags());
+            var modelsTask = TrackLibraryLoad(LoadModels());
 
             await Task.WhenAll(albumsTask, queriesTask, tagsTask, modelsTask);
 
             // Image model names are resolved against the models loaded above, so this has to
             // come after them.
-            await TrackLibraryLoad(LoadImageModels(), "Main.Status.Loading.ImageModels");
+            await TrackLibraryLoad(LoadImageModels());
 
-            await TrackLibraryLoad(InitFolders(), "Main.Status.Loading.Folders");
+            await TrackLibraryLoad(InitFolders());
 
             // The watchers need the root folder list, and creating them hits the filesystem,
             // which can stall on a disconnected network share
@@ -999,11 +999,11 @@ namespace Diffusion.Toolkit
         /// <summary>
         /// Awaits a startup load step and ticks the library progress bar when it finishes.
         /// </summary>
-        private async Task TrackLibraryLoad(Task task, string statusKey)
+        private async Task TrackLibraryLoad(Task task)
         {
             await task;
 
-            _model.AdvanceLibraryLoad(GetLocalizedText(statusKey));
+            _model.AdvanceLibraryLoad();
         }
 
         private async Task Cleanup()

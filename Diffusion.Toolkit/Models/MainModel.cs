@@ -180,10 +180,13 @@ public class MainModel : BaseNotify
         IsLoadingLibrary = true;
     }
 
-    public void AdvanceLibraryLoad(string status)
+    /// <summary>
+    /// Advances the bar only. The caption is set once at the start and left alone: the steps
+    /// complete out of order, and naming the one that just finished told the user nothing.
+    /// </summary>
+    public void AdvanceLibraryLoad()
     {
         LibraryLoadProgress++;
-        LibraryLoadStatus = status;
     }
 
     public void EndLibraryLoad()

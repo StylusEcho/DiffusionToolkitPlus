@@ -662,7 +662,13 @@ namespace Diffusion.Toolkit.Controls
 
         private bool isPlaying = true;
         private bool isEnded = false;
-        private bool _userMuted;
+
+        /// <summary>
+        /// Static so muting survives closing and reopening the viewer, which builds a fresh window
+        /// each time. There is only ever one popped out pane, and this is deliberately not
+        /// persisted - it lasts the session and no longer.
+        /// </summary>
+        private static bool _userMuted;
 
         private void Player_OnMouseDown(object sender, MouseButtonEventArgs e)
         {
