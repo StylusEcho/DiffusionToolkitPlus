@@ -22,6 +22,7 @@
             <converters:IsIndexSelectedConverter x:Key="IsIndexSelectedConverter"></converters:IsIndexSelectedConverter>
             <converters:IndexOfConverter x:Key="IndexOfConverter"></converters:IndexOfConverter>
             <converters:NotNullConverter x:Key="NotNullConverter"></converters:NotNullConverter>
+            <converters:AccentColorConverter x:Key="AccentColorConverter"></converters:AccentColorConverter>
 
             <!-- Marks a setting that is kept in the sidecar file rather than config.json, so it is
                  invisible to the original Diffusion Toolkit -->
@@ -364,6 +365,30 @@
                                       DisplayMemberPath="Name"
                                       SelectedValuePath="Value" Margin="0,0,10,0">
                         </ComboBox>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Label Padding="0,0,0,0" Content="{lex:Loc Settings.Themes.AccentColour}"></Label>
+                        <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                    </StackPanel>
+                    <TextBlock Foreground="{DynamicResource ForegroundBrush}" TextWrapping="Wrap" Margin="0,0,10,6"
+                               Text="{lex:Loc Settings.Themes.AccentColour.Description}"></TextBlock>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="34"/>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Shows the colour actually in effect, so an empty or half-typed value
+                             still previews the theme's own accent rather than going blank -->
+                        <Border Grid.Column="0" Width="26" Height="26" CornerRadius="4"
+                                BorderThickness="1" BorderBrush="{DynamicResource SecondaryBrush}"
+                                Background="{Binding ExtendedSettings.AccentColor, RelativeSource={RelativeSource AncestorType=local:NavigationPage}, Converter={StaticResource AccentColorConverter}}">
+                        </Border>
+                        <TextBox Grid.Column="1" Height="26" VerticalContentAlignment="Center" Margin="0,0,10,0"
+                                 Text="{Binding ExtendedSettings.AccentColor, RelativeSource={RelativeSource AncestorType=local:NavigationPage}, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+                        <Button Grid.Column="2" Height="26" Padding="10,0" Click="ResetAccentColour_OnClick"
+                                Content="{lex:Loc Settings.Themes.AccentColour.Reset}"></Button>
                     </Grid>
 
                     <Label Content="{lex:Loc Settings.Themes.Language}"/>

@@ -18,12 +18,17 @@
         <converters:HasValueVisibilityConverter x:Key="hasValue"></converters:HasValueVisibilityConverter>
     </UserControl.Resources>
     <Grid x:Name="Root" Background="Transparent"
-        DataContext="{Binding CurrentImage, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}}">
+        DataContext="{Binding CurrentImage, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}}">
         <Grid.Resources>
             <!-- Every value in this panel is read-only text. Give it an explicit foreground so it
-                 never falls back to the WPF default of black on a dark panel. -->
+                 never falls back to the WPF default of black on a dark panel.
+
+                 These bindings must name MetadataPanel rather than ask for AncestorType=UserControl.
+                 A Setter's binding resolves against the styled element, and most of this panel sits
+                 inside an AccordionControl, which is itself a UserControl - so the loose form found
+                 the accordion, failed to find TextForeground on it, and left the text black. -->
             <Style TargetType="TextBox">
-                <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}}"></Setter>
+                <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}}"></Setter>
                 <Setter Property="Background" Value="Transparent"></Setter>
                 <Setter Property="BorderThickness" Value="0"></Setter>
                 <Setter Property="IsReadOnly" Value="True"></Setter>
@@ -31,11 +36,11 @@
             <!-- Field captions would otherwise pick up the theme's ForegroundBrush, which is dimmer
                  than the values beside them. Labels carrying an explicit style keep it. -->
             <Style TargetType="Label">
-                <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}}"></Setter>
+                <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}}"></Setter>
                 <Setter Property="Background" Value="Transparent"></Setter>
             </Style>
             <Style TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}}"></Setter>
+                <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}}"></Setter>
             </Style>
         </Grid.Resources>
         <Grid.ContextMenu>
@@ -55,7 +60,7 @@
                                                    HeaderBackground="#80000000" 
                                                    Header="{lex:Loc Metadata.Prompt}"
                                                    Margin="0,0,0,5"
-                                                   State="{Binding MetadataSection.PromptState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}" 
+                                                   State="{Binding MetadataSection.PromptState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}" 
                                                    >
                             <local:AccordionControl.ButtonAreaContent>
                                 <Grid Background="{x:Null}">
@@ -76,7 +81,7 @@
                         <local:AccordionControl x:Name="NegativePromptMetadata"
                                                 Visibility="{Binding NegativePrompt, Converter={StaticResource hasValue}}" 
                                                    Margin="0,0,0,5"
-                                                   State="{Binding MetadataSection.NegativePromptState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.NegativePrompt}">
+                                                   State="{Binding MetadataSection.NegativePromptState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.NegativePrompt}">
                             <local:AccordionControl.ButtonAreaContent>
                                 <Grid Background="{x:Null}">
                                     <Grid.ColumnDefinitions>
@@ -94,7 +99,7 @@
                         <local:AccordionControl x:Name="ModelMetadata"
                                                 Visibility="{Binding ModelName, Converter={StaticResource hasValue}}" 
                                                 Margin="0,0,0,5"
-                                                State="{Binding MetadataSection.ModelState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.ModelName}">
+                                                State="{Binding MetadataSection.ModelState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.ModelName}">
                             <local:AccordionControl.ButtonAreaContent>
                                 <Grid Background="{x:Null}">
                                     <Grid.ColumnDefinitions>
@@ -121,7 +126,7 @@
                         <local:AccordionControl x:Name="SeedMetadata"
                                                 Visibility="{Binding Seed, Converter={StaticResource hasValue}}"
                                                    Margin="0,0,0,5"
-                                                   State="{Binding MetadataSection.SeedState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}"   HeaderBackground="#80000000" Header="{lex:Loc Metadata.Seed}">
+                                                   State="{Binding MetadataSection.SeedState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}"   HeaderBackground="#80000000" Header="{lex:Loc Metadata.Seed}">
                             <local:AccordionControl.ButtonAreaContent>
                                 <Grid Background="{x:Null}">
                                     <Grid.ColumnDefinitions>
@@ -161,7 +166,7 @@
                         <local:AccordionControl x:Name="SamplerMetadata"
                                                 Visibility="{Binding Sampler, Converter={StaticResource hasValue}}"
                                                    Margin="0,0,0,5"
-                                                   State="{Binding MetadataSection.SamplerState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.Sampler}">
+                                                   State="{Binding MetadataSection.SamplerState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.Sampler}">
                             <TextBox Background="#00000000" FontSize="14" BorderThickness="0"
                                      IsReadOnly="True"
                                      Padding="5" TextWrapping="WrapWithOverflow" Text="{Binding Sampler}"/>
@@ -172,20 +177,22 @@
                         <local:AccordionControl x:Name="VideoMetadata"
                                                 Margin="0,0,0,5"
                                                 Visibility="{Binding VideoInfo.HasAny, Converter={StaticResource boolToVisCol}}"
-                                                State="{Binding ExtendedSettings.VideoSectionState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}"
+                                                State="{Binding ExtendedSettings.VideoSectionState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}"
                                                 HeaderBackground="#80000000" Header="{lex:Loc Metadata.Video}">
                             <StackPanel Background="{x:Null}" DataContext="{Binding VideoInfo}">
                                 <StackPanel.Resources>
-                                    <!-- Two points larger than the other sections, as requested -->
+                                    <!-- Two points larger than the other sections, as requested.
+                                         Foreground names MetadataPanel for the reason given on the
+                                         panel's own styles - this StackPanel is inside an accordion. -->
                                     <Style TargetType="Label">
                                         <Setter Property="Background" Value="Transparent"></Setter>
-                                        <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}}"></Setter>
+                                        <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}}"></Setter>
                                         <Setter Property="FontSize" Value="12"></Setter>
                                         <Setter Property="Opacity" Value="0.7"></Setter>
                                         <Setter Property="Padding" Value="5,2,5,0"></Setter>
                                     </Style>
                                     <Style TargetType="TextBox">
-                                        <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}}"></Setter>
+                                        <Setter Property="Foreground" Value="{Binding TextForeground, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}}"></Setter>
                                         <Setter Property="Background" Value="Transparent"></Setter>
                                         <Setter Property="FontSize" Value="16"></Setter>
                                         <Setter Property="BorderThickness" Value="0"></Setter>
@@ -239,7 +246,7 @@
                         <local:AccordionControl x:Name="OtherMetadata"
                                                 Visibility="{Binding OtherParameters, Converter={StaticResource hasValue}}" 
                                                    Margin="0,0,0,5"
-                                                   State="{Binding MetadataSection.OthersState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.Others}">
+                                                   State="{Binding MetadataSection.OthersState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.Others}">
                             <local:AccordionControl.ButtonAreaContent>
                                 <Grid Background="{x:Null}">
                                     <Grid.ColumnDefinitions>
@@ -257,7 +264,7 @@
                         <local:AccordionControl x:Name="PathMetadata"
                                                 Visibility="{Binding Path, Converter={StaticResource hasValue}}" 
                                                    Margin="0,0,0,5"
-                                                   State="{Binding MetadataSection.PathState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.Path}">
+                                                   State="{Binding MetadataSection.PathState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}"  HeaderBackground="#80000000" Header="{lex:Loc Metadata.Path}">
                             <local:AccordionControl.ButtonAreaContent>
                                 <Grid Background="{x:Null}">
                                     <Grid.ColumnDefinitions>
@@ -278,7 +285,7 @@
                                                 Visibility="{Binding Date, Converter={StaticResource hasValue}}" 
                                                    Margin="0,0,0,5"
                                                    HeaderBackground="#80000000" 
-                                                   State="{Binding MetadataSection.DateState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}"  Header="{lex:Loc Metadata.Date}">
+                                                   State="{Binding MetadataSection.DateState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}"  Header="{lex:Loc Metadata.Date}">
                             <TextBox Background="#00000000" FontSize="14" BorderThickness="0"
                                      IsReadOnly="True"
                                      Padding="5" TextWrapping="WrapWithOverflow" Text="{Binding Date}"/>
@@ -288,7 +295,7 @@
                                                 Visibility="{Binding Albums, Converter={StaticResource hasValue}}" 
                                                    Margin="0,0,0,5"
                                                    HeaderBackground="#80000000" 
-                                                   State="{Binding MetadataSection.AlbumState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=UserControl}, Mode=TwoWay}"  Header="{lex:Loc Metadata.Albums}">
+                                                   State="{Binding MetadataSection.AlbumState, RelativeSource={RelativeSource AncestorLevel=1, Mode=FindAncestor, AncestorType=local:MetadataPanel}, Mode=TwoWay}"  Header="{lex:Loc Metadata.Albums}">
                             <ItemsControl ItemsSource="{Binding Albums}">
                                 <ItemsControl.Resources>
                                     <common:BindingProxy x:Key="Proxy" Data="{Binding .}" />

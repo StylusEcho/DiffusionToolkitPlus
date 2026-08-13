@@ -82,7 +82,7 @@
                         </Grid.ColumnDefinitions>
                         <Border Background="{x:Null}" Grid.Column="1" Margin="0,10,0,0" BorderThickness="1" CornerRadius="10" BorderBrush="{DynamicResource SecondaryBrush}" Width="300">
                             <Grid Background="Transparent" MouseDown="QueryBar_OnMouseDown">
-                                <Label Foreground="{DynamicResource ForegroundBrush}" HorizontalContentAlignment="Center">Diffusion Toolkit</Label>
+                                <Label Foreground="{DynamicResource ForegroundBrush}" HorizontalContentAlignment="Center">Diffusion Toolkit Plus</Label>
                                 <fa:ImageAwesome HorizontalAlignment="Left" Margin="10,0,0,0" Icon="Search" Width="12" ToolTip="{lex:Loc QueryBar.Query.ToolTip}" PreviewMouseDown="QueryBar_OnMouseDown">
                                     <fa:ImageAwesome.Style>
                                         <Style TargetType="fa:ImageAwesome">
@@ -200,7 +200,7 @@
                         </Grid.ColumnDefinitions>
                         <Border Background="{x:Null}" Grid.Column="1" Margin="0,10,0,0" BorderThickness="1" CornerRadius="10" BorderBrush="{DynamicResource SecondaryBrush}" Width="200">
                             <Grid Background="Transparent" MouseDown="QueryBar_OnMouseDown">
-                                <Label Foreground="{DynamicResource ForegroundBrush}" HorizontalContentAlignment="Center">Diffusion Toolkit</Label>
+                                <Label Foreground="{DynamicResource ForegroundBrush}" HorizontalContentAlignment="Center">Diffusion Toolkit Plus</Label>
                                 <fa:ImageAwesome HorizontalAlignment="Left" Margin="10,0,0,0" Icon="Search" Width="12" ToolTip="{lex:Loc QueryBar.Query.ToolTip}" PreviewMouseDown="QueryBar_OnMouseDown">
                                     <fa:ImageAwesome.Style>
                                         <Style TargetType="fa:ImageAwesome">
@@ -451,13 +451,19 @@
         <Grid Grid.Row="1">
             <DockPanel>
                 <!-- The view bar is the first thing the pointer crosses on its way to the left edge,
-                     so it doubles as the reveal zone for an auto-hidden navigation pane -->
-                <Grid Margin="0,5,10,0" Background="Transparent" MouseMove="ViewBar_OnMouseMove">
+                     so it doubles as the reveal zone for an auto-hidden navigation pane. The gap to
+                     its right is padding inside the grid rather than a margin outside it, otherwise
+                     that strip belongs to no hit-testable element and the pane hides when the
+                     pointer crosses it. -->
+                <Grid Margin="0,5,0,0" Background="Transparent"
+                      MouseMove="ViewBar_OnMouseMove"
+                      MouseEnter="ViewBar_OnMouseEnter"
+                      MouseLeave="ViewBar_OnMouseLeave">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <StackPanel Orientation="Vertical">
+                    <StackPanel Orientation="Vertical" Margin="0,0,10,0">
                         <Button Margin="0,5,0,10" Height="16" Width="24" 
                                 behaviors:DTBehaviors.IsSelected="{Binding ActiveView, Converter={StaticResource StringMatchConverter}, ConverterParameter=Folders}"
                                 Style="{StaticResource BorderlessToolbarButton}" Command="{Binding GotoUrl}" CommandParameter="search/#folders">
@@ -513,7 +519,7 @@
 
                     <!-- Auto-hide the navigation pane. Sits at the foot of the bar, away from the
                          view icons it would otherwise be mistaken for -->
-                    <Button Grid.Row="1" VerticalAlignment="Bottom" Margin="0,10,0,10" Height="16" Width="24"
+                    <Button Grid.Row="1" VerticalAlignment="Bottom" Margin="0,10,10,10" Height="16" Width="24"
                             Style="{StaticResource BorderlessToolbarButton}"
                             Command="{Binding ToggleNavigationAutoHideCommand}">
                         <fa:ImageAwesome Icon="Columns" Width="16" VerticalAlignment="Center" HorizontalAlignment="Center"

@@ -183,7 +183,15 @@ namespace Diffusion.Toolkit.Pages
         }
 
         private Window _window;
-        
+
+        /// <summary>
+        /// Clears the accent override, putting the current theme's own accent back.
+        /// </summary>
+        private void ResetAccentColour_OnClick(object sender, RoutedEventArgs e)
+        {
+            ExtendedSettings.AccentColor = null;
+        }
+
         private void BrowseModelPath_OnClick(object sender, RoutedEventArgs e)
         {
             using var dialog = new CommonOpenFileDialog();

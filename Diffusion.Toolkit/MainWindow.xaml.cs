@@ -472,6 +472,16 @@ namespace Diffusion.Toolkit
             _search?.RevealNavigationPane();
         }
 
+        private void ViewBar_OnMouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            _search?.SetPointerOverViewBar(true);
+        }
+
+        private void ViewBar_OnMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            _search?.SetPointerOverViewBar(false);
+        }
+
         private void SetThumbnailSize(int size)
         {
             _settings.ThumbnailSize = size;
@@ -517,6 +527,8 @@ namespace Diffusion.Toolkit
             var _showReleaseNotes = false;
 
             ServiceLocator.SetDataStore(dataStore);
+
+            WatchAccentColour();
 
             var isFirstTime = false;
             IReadOnlyList<string> newFolders = null;
@@ -1096,6 +1108,20 @@ namespace Diffusion.Toolkit
         private void UpdateTheme(string theme)
         {
             ThemeManager.ChangeTheme(theme);
+        }
+
+        /// <summary>
+        /// Repoints the accent resource as soon as the colour is edited, so the change is visible
+        /// without reopening the app or switching theme.
+        /// </summary>
+        private void WatchAccentColour()
+        {
+            ServiceLocator.ExtendedSettings.SettingChanged += (_, args) =>
+            {
+                if (args.SettingName != nameof(ExtendedSettings.AccentColor)) return;
+
+                Dispatcher.Invoke(() => ThemeManager.ApplyAccentOverride());
+            };
         }
 
 
