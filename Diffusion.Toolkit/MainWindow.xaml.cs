@@ -528,6 +528,8 @@ namespace Diffusion.Toolkit
 
             ServiceLocator.SetDataStore(dataStore);
 
+            WatchAccentColour();
+
             var isFirstTime = false;
             IReadOnlyList<string> newFolders = null;
 
@@ -1106,6 +1108,20 @@ namespace Diffusion.Toolkit
         private void UpdateTheme(string theme)
         {
             ThemeManager.ChangeTheme(theme);
+        }
+
+        /// <summary>
+        /// Repoints the accent resource as soon as the colour is edited, so the change is visible
+        /// without reopening the app or switching theme.
+        /// </summary>
+        private void WatchAccentColour()
+        {
+            ServiceLocator.ExtendedSettings.SettingChanged += (_, args) =>
+            {
+                if (args.SettingName != nameof(ExtendedSettings.AccentColor)) return;
+
+                Dispatcher.Invoke(() => ThemeManager.ApplyAccentOverride());
+            };
         }
 
 

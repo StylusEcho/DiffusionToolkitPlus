@@ -103,6 +103,16 @@ public class ExtendedSettings : SettingsContainer
     }
 
     /// <summary>
+    /// Overrides the accent colour used for badges and markers, as a hex string such as "#00C2CB".
+    /// Empty means the current theme's own accent is used.
+    /// </summary>
+    public string? AccentColor
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
     /// Rendered width of the navigation pane, in pixels.
     /// </summary>
     /// <remarks>
