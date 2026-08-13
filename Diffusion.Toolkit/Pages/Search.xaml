@@ -289,11 +289,7 @@
                                        MouseEnter="NavigationPane_OnMouseEnter"
                                        MouseLeave="NavigationPane_OnMouseLeave">
 
-                                <!-- Stands in for the splitter while the pane floats over the
-                                     thumbnails, which would otherwise run straight into it -->
-                                <Border x:Name="NavigationPaneEdge" DockPanel.Dock="Right" Width="1"
-                                        Background="{DynamicResource SplitterBrush}" Visibility="Collapsed"/>
-
+                                <Grid>
                                 <ScrollViewer Focusable="True" x:Name="NavigationScrollViewer" VerticalScrollBarVisibility="Auto">
                                 <StackPanel>
                                     <!--<controls:AccordionControl HeaderBackground="#80000000" Margin="0,0,0,5"
@@ -913,10 +909,17 @@
                                 </StackPanel>
 
                                 </ScrollViewer>
+
+                                <!-- Stands in for the splitter while the pane floats over the
+                                     thumbnails, which would otherwise run straight into it.
+                                     Overlaid rather than docked so it costs the pane no width. -->
+                                <Border x:Name="NavigationPaneEdge" Width="1" HorizontalAlignment="Right"
+                                        Background="{DynamicResource SplitterBrush}" Visibility="Collapsed"/>
+                                </Grid>
                             </DockPanel>
 
 
-                            <GridSplitter x:Name="GridSplitter2"  
+                            <GridSplitter x:Name="GridSplitter2"
                                           Grid.Row="0" Grid.Column="1"
                                           HorizontalAlignment="Center"
                                           VerticalAlignment="Stretch"
