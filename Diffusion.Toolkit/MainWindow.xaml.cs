@@ -902,9 +902,9 @@ namespace Diffusion.Toolkit
                 // which can stall on a disconnected network share
                 await Task.Run(() => ServiceLocator.FolderService.CreateWatchers());
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Logger.Log($"Library load failed{Environment.NewLine}{e}");
+                Logger.Log($"Library load failed{Environment.NewLine}{ex}");
                 failures.Add("library");
             }
             finally
