@@ -20,6 +20,13 @@ public static class AppInfo
     /// </summary>
     public static string ExtendedSettingsPath { get; }
 
+    /// <summary>
+    /// Hashes already computed for model files, so startup does not have to open and read every
+    /// checkpoint again. Kept beside the settings rather than inside them - it is a cache, not a
+    /// preference, and it can get large.
+    /// </summary>
+    public static string ModelHashCachePath { get; }
+
     public static bool IsPortable { get; }
 
     static AppInfo()
@@ -45,6 +52,7 @@ public static class AppInfo
         }
 
         ExtendedSettingsPath = Path.Combine(Path.GetDirectoryName(SettingsPath)!, "config.extended.json");
+        ModelHashCachePath = Path.Combine(Path.GetDirectoryName(SettingsPath)!, "model-hashes.json");
     }
 
 

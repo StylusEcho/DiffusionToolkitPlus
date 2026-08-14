@@ -16,6 +16,7 @@ using Microsoft.Win32;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using SixLabors.ImageSharp;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -876,28 +877,51 @@ namespace Diffusion.Toolkit
             // read. Search.Navigate holds off actually searching until IsLoadingLibrary clears.
             _navigatorService.Goto("search");
 
-            // Albums, queries, tags and the model list are independent of each other and are
-            // all loaded off the UI thread, so start them together and let them overlap
-            // instead of blocking the window one after the other.
-            var albumsTask = TrackLibraryLoad(LoadAlbums());
-            var queriesTask = TrackLibraryLoad(LoadQueries());
-            var tagsTask = TrackLibraryLoad(LoadTags());
-            var modelsTask = TrackLibraryLoad(LoadModels());
+            // Written from the four concurrent load steps below
+            var failures = new ConcurrentBag<string>();
 
-            await Task.WhenAll(albumsTask, queriesTask, tagsTask, modelsTask);
+            try
+            {
+                // Albums, queries, tags and the model list are independent of each other and are
+                // all loaded off the UI thread, so start them together and let them overlap
+                // instead of blocking the window one after the other.
+                var albumsTask = TrackLibraryLoad(LoadAlbums(), "albums", failures);
+                var queriesTask = TrackLibraryLoad(LoadQueries(), "saved searches", failures);
+                var tagsTask = TrackLibraryLoad(LoadTags(), "tags", failures);
+                var modelsTask = TrackLibraryLoad(LoadModels(), "models", failures);
 
-            // Image model names are resolved against the models loaded above, so this has to
-            // come after them.
-            await TrackLibraryLoad(LoadImageModels());
+                await Task.WhenAll(albumsTask, queriesTask, tagsTask, modelsTask);
 
-            await TrackLibraryLoad(InitFolders());
+                // Image model names are resolved against the models loaded above, so this has to
+                // come after them.
+                await TrackLibraryLoad(LoadImageModels(), "image models", failures);
 
-            // The watchers need the root folder list, and creating them hits the filesystem,
-            // which can stall on a disconnected network share
-            await Task.Run(() => ServiceLocator.FolderService.CreateWatchers());
+                await TrackLibraryLoad(InitFolders(), "folders", failures);
 
-            _model.EndLibraryLoad();
-            _model.Status = string.Empty;
+                // The watchers need the root folder list, and creating them hits the filesystem,
+                // which can stall on a disconnected network share
+                await Task.Run(() => ServiceLocator.FolderService.CreateWatchers());
+            }
+            catch (Exception e)
+            {
+                Logger.Log($"Library load failed{Environment.NewLine}{e}");
+                failures.Add("library");
+            }
+            finally
+            {
+                // The overlay has to come down whatever happened. It gates searching, so leaving
+                // it up strands the app on a screen the user cannot get past.
+                _model.EndLibraryLoad();
+                _model.Status = string.Empty;
+            }
+
+            if (failures.Count > 0)
+            {
+                Logger.Log($"Library loaded with problems: {string.Join(", ", failures)}");
+
+                ServiceLocator.ToastService.Toast(
+                    GetLocalizedText("Main.Status.Loading.Failed").Replace("{steps}", string.Join(", ", failures)), "");
+            }
 
             ServiceLocator.ContextMenuService.Go();
 
@@ -999,12 +1023,46 @@ namespace Diffusion.Toolkit
         /// <summary>
         /// Awaits a startup load step and ticks the library progress bar when it finishes.
         /// </summary>
-        private async Task TrackLibraryLoad(Task task)
+        /// <summary>
+        /// A startup step that cannot strand the load. Whatever happens - it throws, or it never
+        /// comes back at all - the progress bar advances and the caller carries on, because the
+        /// overlay it drives blocks searching and there is no way past it from the UI.
+        /// </summary>
+        /// <remarks>
+        /// A step that overruns is left running rather than abandoned; it will finish in the
+        /// background and its results appear when they do.
+        /// </remarks>
+        private async Task TrackLibraryLoad(Task task, string step, ConcurrentBag<string> failures)
         {
-            await task;
+            var timer = Stopwatch.StartNew();
 
-            _model.AdvanceLibraryLoad();
+            try
+            {
+                if (await Task.WhenAny(task, Task.Delay(LibraryLoadStepTimeout)) != task)
+                {
+                    Logger.Log($"Library load: {step} still running after {timer.Elapsed.TotalSeconds:0}s, opening the library without it");
+                    failures.Add(step);
+                    return;
+                }
+
+                // Completed - observe it, so a fault surfaces here rather than as an unobserved
+                // task exception later
+                await task;
+
+                Logger.Log($"Library load: {step} completed in {timer.ElapsedMilliseconds}ms");
+            }
+            catch (Exception e)
+            {
+                Logger.Log($"Library load: {step} failed after {timer.ElapsedMilliseconds}ms{Environment.NewLine}{e}");
+                failures.Add(step);
+            }
+            finally
+            {
+                _model.AdvanceLibraryLoad();
+            }
         }
+
+        private static readonly TimeSpan LibraryLoadStepTimeout = TimeSpan.FromMinutes(2);
 
         private async Task Cleanup()
         {
