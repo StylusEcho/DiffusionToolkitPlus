@@ -902,9 +902,9 @@ namespace Diffusion.Toolkit
                 // which can stall on a disconnected network share
                 await Task.Run(() => ServiceLocator.FolderService.CreateWatchers());
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Logger.Log($"Library load failed{Environment.NewLine}{e}");
+                Logger.Log($"Library load failed{Environment.NewLine}{ex}");
                 failures.Add("library");
             }
             finally
@@ -1020,9 +1020,6 @@ namespace Diffusion.Toolkit
             // Cleanup();
         }
 
-        /// <summary>
-        /// Awaits a startup load step and ticks the library progress bar when it finishes.
-        /// </summary>
         /// <summary>
         /// A startup step that cannot strand the load. Whatever happens - it throws, or it never
         /// comes back at all - the progress bar advances and the caller carries on, because the
