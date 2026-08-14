@@ -1021,9 +1021,6 @@ namespace Diffusion.Toolkit
         }
 
         /// <summary>
-        /// Awaits a startup load step and ticks the library progress bar when it finishes.
-        /// </summary>
-        /// <summary>
         /// A startup step that cannot strand the load. Whatever happens - it throws, or it never
         /// comes back at all - the progress bar advances and the caller carries on, because the
         /// overlay it drives blocks searching and there is no way past it from the UI.

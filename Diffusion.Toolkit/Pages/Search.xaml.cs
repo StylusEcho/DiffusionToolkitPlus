@@ -1302,10 +1302,6 @@ namespace Diffusion.Toolkit.Pages
         }
 
         /// <summary>
-        /// Loads current search results without updating the count
-        /// </summary>
-        /// <param name="options"></param>
-        /// <summary>
         /// Puts the selection back on the image the user was looking at before a reload that
         /// carried no cursor of its own - auto refresh reacting to a newly scanned image, mostly.
         /// Returns false if that image is no longer in the results, leaving the caller to decide.
@@ -1344,6 +1340,10 @@ namespace Diffusion.Toolkit.Pages
             return true;
         }
 
+        /// <summary>
+        /// Loads current search results without updating the count
+        /// </summary>
+        /// <param name="options"></param>
         public void ReloadMatches(ReloadOptions? options)
         {
             var restoreImageId = 0;
