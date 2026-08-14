@@ -1305,13 +1305,61 @@ namespace Diffusion.Toolkit.Pages
         /// Loads current search results without updating the count
         /// </summary>
         /// <param name="options"></param>
+        /// <summary>
+        /// Puts the selection back on the image the user was looking at before a reload that
+        /// carried no cursor of its own - auto refresh reacting to a newly scanned image, mostly.
+        /// Returns false if that image is no longer in the results, leaving the caller to decide.
+        /// </summary>
+        /// <remarks>
+        /// Matched by id rather than by object or index: <see cref="LoadImageEntries"/> reuses the
+        /// existing entries and overwrites them in place, so the same object at the same index can
+        /// describe a different image once a new one arrives.
+        /// </remarks>
+        private bool TryRestoreSelection(int imageId, bool focus)
+        {
+            if (imageId <= 0 || _model.Images is not { Count: > 0 }) return false;
+
+            var index = -1;
+
+            for (var i = 0; i < _model.Images.Count; i++)
+            {
+                var entry = _model.Images[i];
+
+                if (!entry.IsEmpty && entry.Id == imageId)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index < 0) return false;
+
+            _model.SelectedImageEntry = _model.Images[index];
+
+            // Same reason as the cursor placement above - the reloaded containers do not exist
+            // until the layout pass has run
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded,
+                new Action(() => ThumbnailListView.SelectItem(index, focus)));
+
+            return true;
+        }
+
         public void ReloadMatches(ReloadOptions? options)
         {
+            var restoreImageId = 0;
+            var gridHadFocus = false;
+
             Task.Run(() =>
             {
                 Dispatcher.Invoke(() =>
                 {
                     _model.IsBusy = true;
+
+                    // Remember what the user was on before the reload takes it away. The entries
+                    // are recycled in place and a new image shifts everything along, so the id is
+                    // the only thing that still means the same afterwards.
+                    restoreImageId = _model.SelectedImageEntry?.Id ?? 0;
+                    gridHadFocus = ThumbnailListView.IsKeyboardFocusWithin;
                 });
 
                 try
@@ -1367,7 +1415,7 @@ namespace Diffusion.Toolkit.Pages
                             //ServiceLocator.MainModel.SelectedImages.Clear();
                             //ServiceLocator.MainModel.SelectedImages.Add(_model.SelectedImageEntry);
                         }
-                        else
+                        else if (!TryRestoreSelection(restoreImageId, gridHadFocus))
                         {
                             _model.SelectedImageEntry = null;
                         }

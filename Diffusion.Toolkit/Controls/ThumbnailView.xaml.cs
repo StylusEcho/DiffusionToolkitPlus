@@ -316,6 +316,31 @@ namespace Diffusion.Toolkit.Controls
             FocusItem(ThumbnailListView.SelectedIndex);
         }
 
+        /// <summary>
+        /// Selects an item, taking keyboard focus with it only when asked. A reload happening in
+        /// the background has to put the selection back without pulling the caret out of whatever
+        /// the user is typing in.
+        /// </summary>
+        public void SelectItem(int index, bool focus)
+        {
+            if (index < 0 || index >= ThumbnailListView.Items.Count) return;
+
+            ThumbnailListView.SelectedIndex = index;
+
+            if (focus)
+            {
+                FocusItem(index);
+                return;
+            }
+
+            var wrapPanel = GetChildOfType<WrapPanel>(this);
+
+            if (wrapPanel != null && index < wrapPanel.Children.Count && wrapPanel.Children[index] is ListViewItem item)
+            {
+                ThumbnailListView.ScrollIntoView(item);
+            }
+        }
+
         public void FocusItem(int index)
         {
             if (index >= 0)
@@ -769,24 +794,44 @@ namespace Diffusion.Toolkit.Controls
         private Point _start;
         private bool _dragStarted;
 
+        /// <summary>
+        /// What the press landed on, and what a drag from it would carry. Both are settled when
+        /// the button goes down: by the time the pointer has travelled far enough to count as a
+        /// drag it may well be over the next thumbnail, and nothing captures the mouse in between,
+        /// so re-reading either of them at that point picks up the wrong image.
+        /// </summary>
+        private ImageEntry? _dragSourceEntry;
+        private List<ImageEntry>? _dragPayload;
+
         private void ThumbnailListView_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             Point pt = e.GetPosition(ThumbnailListView);
             var item = VisualTreeHelper.HitTest(ThumbnailListView, pt);
 
+            _dragSourceEntry = null;
+            _dragPayload = null;
+
             if (item != null)
             {
-                var thumbnail = item.VisualHit as Thumbnail;
-
                 if (item.VisualHit is FrameworkElement { DataContext: ImageEntry { IsEmpty: false } entry })
                 {
+                    var wasSelected = ThumbnailListView.SelectedItems.Contains(entry);
+
+                    // Pressing inside a multiple selection drags the whole of it; pressing
+                    // anywhere else drags just what was pressed. Snapshot it before the selection
+                    // has any chance to move.
+                    _dragSourceEntry = entry;
+                    _dragPayload = wasSelected
+                        ? ThumbnailListView.SelectedItems.Cast<ImageEntry>().Where(d => !d.IsEmpty).ToList()
+                        : new List<ImageEntry> { entry };
+
                     //currentItemIndex = ThumbnailListView.Items.IndexOf(f.DataContext);
                     Model.MainModel.CurrentImageEntry = entry;
                     SelectedImageEntry = entry;
 
                     if (e.LeftButton == MouseButtonState.Pressed && (e.OriginalSource is Thumbnail or Border or Grid or ImageAwesome))
                     {
-                        if (ThumbnailListView.SelectedItems.Contains(entry))
+                        if (wasSelected)
                         {
                             if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 || (Keyboard.Modifiers & ModifierKeys.Shift) != 0)
                             {
@@ -818,34 +863,44 @@ namespace Diffusion.Toolkit.Controls
 
         private void ThumbnailListView_OnMouseMove(object sender, MouseEventArgs e)
         {
+            if (e.LeftButton != MouseButtonState.Pressed)
+            {
+                // The button came up somewhere we did not see it, so the press is spent
+                _dragSourceEntry = null;
+                _dragPayload = null;
+                return;
+            }
+
+            if (_dragStarted || _dragSourceEntry == null || _dragPayload is not { Count: > 0 }) return;
+
             Point mpos = e.GetPosition(null);
             Vector diff = this._start - mpos;
 
-            Point pt = e.GetPosition(ThumbnailListView);
-            var item = VisualTreeHelper.HitTest(ThumbnailListView, pt);
-
-            if (e.LeftButton == MouseButtonState.Pressed && item != null && !_dragStarted &&
-                (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                 Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance))
+            if (Math.Abs(diff.X) <= SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(diff.Y) <= SystemParameters.MinimumVerticalDragDistance)
             {
-                if (item.VisualHit is FrameworkElement { DataContext: ImageEntry { IsEmpty: false } entry })
-                {
-                    _dragStarted = true;
-
-                    var source = (ListView)sender;
-
-                    var items = ThumbnailListView.SelectedItems.Cast<ImageEntry>();
-
-                    DataObject dataObject = new DataObject();
-                    dataObject.SetData(DataFormats.FileDrop, items.Select(t => t.Path).ToArray());
-                    dataObject.SetData(DragAndDrop.DragFiles, items.ToArray());
-
-                    // TODO : Randomly hangs?
-                    DragDrop.DoDragDrop(source, dataObject, DragDropEffects.Move | DragDropEffects.Copy);
-                    _dragStarted = false;
-                    e.Handled = true;
-                }
+                return;
             }
+
+            _dragStarted = true;
+
+            var source = (ListView)sender;
+
+            var items = _dragPayload;
+
+            DataObject dataObject = new DataObject();
+            dataObject.SetData(DataFormats.FileDrop, items.Select(t => t.Path).ToArray());
+            dataObject.SetData(DragAndDrop.DragFiles, items.ToArray());
+
+            // TODO : Randomly hangs?
+            DragDrop.DoDragDrop(source, dataObject, DragDropEffects.Move | DragDropEffects.Copy);
+
+            // DoDragDrop swallows the release that ended the drag, so MouseUp cannot be relied on
+            // to clear this
+            _dragStarted = false;
+            _dragSourceEntry = null;
+            _dragPayload = null;
+            e.Handled = true;
         }
 
         private void Unrate_OnClick(object sender, RoutedEventArgs e)
@@ -961,6 +1016,8 @@ namespace Diffusion.Toolkit.Controls
         private void ThumbnailListView_OnMouseUp(object sender, MouseButtonEventArgs e)
         {
             _dragStarted = false;
+            _dragSourceEntry = null;
+            _dragPayload = null;
         }
 
         private void ThumbnailListView_OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -990,9 +1047,12 @@ namespace Diffusion.Toolkit.Controls
                         {
                             if (ThumbnailListView.SelectedItems.Count > 1)
                             {
+                                // Releasing inside a multiple selection collapses it onto the one
+                                // item clicked. Clear first: clearing afterwards took the single
+                                // selection back out again.
+                                ThumbnailListView.SelectedItems.Clear();
                                 ThumbnailListView.SelectedIndex = ThumbnailListView.Items.IndexOf(entry);
                                 FocusCurrentItem();
-                                ThumbnailListView.SelectedItems.Clear();
                             }
                         }
                     }
