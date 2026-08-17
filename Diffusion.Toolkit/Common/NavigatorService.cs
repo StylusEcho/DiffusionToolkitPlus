@@ -64,6 +64,13 @@ public class NavigatorService : INavigatorService
 
     public event EventHandler<NavigateEventArgs> OnNavigate;
 
+    /// <summary>
+    /// The url last navigated to, so a caller can tell whether the user is still where an
+    /// earlier action left them before acting on their behalf - e.g. only returning from an
+    /// empty bin if the user has not since navigated elsewhere themselves.
+    /// </summary>
+    public string? CurrentUrl => _currentUrl?.Url;
+
     public NavigatorService(Window host)
     {
         Host = host;
@@ -85,8 +92,14 @@ public class NavigatorService : INavigatorService
         Navigate(url);
     }
 
+    /// <summary>
+    /// Returns to whatever was navigated from last, if anything. A no-op rather than throwing
+    /// when there is nowhere to go back to, so callers can use it speculatively.
+    /// </summary>
     public void Back()
     {
+        if (_history.Count == 0) return;
+
         var uri = _history.Pop();
         Navigate(uri.Url);
     }

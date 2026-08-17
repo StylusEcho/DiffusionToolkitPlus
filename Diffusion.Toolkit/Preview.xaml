@@ -43,6 +43,9 @@
         <KeyBinding Key="T" Modifiers="Control+Shift" Command="{Binding ToggleAutoAdvance}"></KeyBinding>
         <KeyBinding Key="I" Command="{Binding ToggleInfo}"></KeyBinding>
         <KeyBinding Key="M" Command="{Binding ToggleMuteCommand}"></KeyBinding>
+        <!-- Quick album, same shortcut as the main window; ToggleQuickAlbumCommand lives on
+             MainModel and operates on the global selection, so it can be bound directly -->
+        <KeyBinding Key="B" Command="{Binding MainModel.ToggleQuickAlbumCommand}"></KeyBinding>
         <KeyBinding Key="F11" Command="{Binding ToggleFullScreen}"></KeyBinding>
         <!-- Space is handled in OnPreviewKeyDown so a focused control bar button can't steal it -->
         <KeyBinding Modifiers="Shift" Key="D1" Command="{Binding OpenWithCommand}" CommandParameter="1"></KeyBinding>
