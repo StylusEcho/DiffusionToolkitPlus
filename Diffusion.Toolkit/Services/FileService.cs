@@ -235,6 +235,17 @@ public class FileService
                         ServiceLocator.ScanningService.SetTotalFilesStatus();
 
                         ServiceLocator.SearchService.RefreshResults();
+
+                        ServiceLocator.Dispatcher.Invoke(() =>
+                        {
+                            // Only leave the now-empty bin if the user is still looking at it -
+                            // they may have navigated elsewhere while the confirmation dialog, or
+                            // the delete itself, was in progress
+                            if (ServiceLocator.NavigatorService.CurrentUrl == "search/#deleted")
+                            {
+                                ServiceLocator.NavigatorService.Back();
+                            }
+                        });
                     }
                 }
             });

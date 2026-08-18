@@ -93,6 +93,14 @@ public class AlbumService
             message = GetLocalizedText("Actions.Albums.QuickAlbum.Removed")
                 .Replace("{images}", $"{count}")
                 .Replace("{album}", album.Name);
+
+            // Viewing the quick album itself means the entries just removed no longer belong in
+            // the list. Everywhere else the badge alone is enough - refreshing there would only
+            // cost a requery for no visible benefit, since nothing needs to leave the view.
+            if (ServiceLocator.MainModel.CurrentAlbum is { IsQuickAlbum: true })
+            {
+                ServiceLocator.SearchService.RefreshResults();
+            }
         }
         else
         {
