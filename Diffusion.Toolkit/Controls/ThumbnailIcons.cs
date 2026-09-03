@@ -193,6 +193,20 @@ public class ThumbnailIcons : FrameworkElement
         }
     }
 
+    /// <summary>
+    /// The extent to lay badges out within: the arranged size where there is one, the explicit
+    /// size otherwise, and the icon size as a floor so a corner-anchored badge always lands
+    /// somewhere on screen even if this control never got measured properly.
+    /// </summary>
+    private static double ResolveExtent(double actual, double explicitSize, double minimum)
+    {
+        if (actual > 0) return actual;
+
+        if (!double.IsNaN(explicitSize) && explicitSize > 0) return explicitSize;
+
+        return minimum;
+    }
+
     protected override void OnRender(DrawingContext drawingContext)
     {
         base.OnRender(drawingContext);
@@ -211,9 +225,14 @@ public class ThumbnailIcons : FrameworkElement
         const int xOffset = 22;
 
         // The control spans the whole thumbnail so the corners can be addressed independently.
-        // Width is never set, so only the actual arranged size is any use here.
-        var right = ActualWidth - iconSize;
-        var bottom = ActualHeight - iconSize;
+        // Prefer the arranged size, fall back to the explicit one, and never end up with nothing:
+        // anything anchored to a right or bottom edge that does not exist would be drawn off
+        // screen, which is indistinguishable from the badge being missing entirely.
+        var width = ResolveExtent(ActualWidth, Width, iconSize);
+        var height = ResolveExtent(ActualHeight, Height, iconSize);
+
+        var right = width - iconSize;
+        var bottom = height - iconSize;
 
         // The status row runs left to right along the bottom edge
         var x = 0d;
@@ -223,7 +242,7 @@ public class ThumbnailIcons : FrameworkElement
         if (Data.IsInQuickAlbum)
         {
             drawingContext.DrawImage(BookmarkIcon,
-                new Rect(new Point(ActualWidth - smallIconSize, ActualHeight - smallIconSize),
+                new Rect(new Point(width - smallIconSize, height - smallIconSize),
                     new Size(smallIconSize, smallIconSize)));
         }
 
