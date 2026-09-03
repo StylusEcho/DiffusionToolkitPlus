@@ -209,6 +209,7 @@ public class ImageEntry : BaseNotify
         Path = "";
         CreatedDate = DateTime.MinValue;
         AlbumCount = 0;
+        IsInQuickAlbum = false;
         Albums = Enumerable.Empty<string>();
         HasError = false;
         Unavailable = false;

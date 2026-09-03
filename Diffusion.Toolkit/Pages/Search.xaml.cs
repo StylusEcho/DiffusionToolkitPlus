@@ -1624,6 +1624,7 @@ namespace Diffusion.Toolkit.Pages
                     dest.Path = src.Path;
                     dest.CreatedDate = src.CreatedDate;
                     dest.AlbumCount = src.AlbumCount;
+                    dest.IsInQuickAlbum = src.IsInQuickAlbum;
                     dest.Albums = src.Albums;
                     dest.HasError = src.HasError;
                     dest.Unavailable = src.Unavailable;
@@ -1681,6 +1682,7 @@ namespace Diffusion.Toolkit.Pages
                     dest.Path = "";
                     dest.CreatedDate = DateTime.MinValue;
                     dest.AlbumCount = 0;
+                    dest.IsInQuickAlbum = false;
                     dest.Albums = Enumerable.Empty<string>();
                     dest.HasError = false;
                     dest.Unavailable = false;
@@ -1722,6 +1724,7 @@ namespace Diffusion.Toolkit.Pages
                     dest.Path = src.Path;
                     dest.CreatedDate = src.CreatedDate;
                     dest.AlbumCount = src.AlbumCount;
+                    dest.IsInQuickAlbum = src.IsInQuickAlbum;
                     dest.Albums = src.Albums;
                     dest.HasError = src.HasError;
                     dest.Unavailable = !File.Exists(src.Path);
@@ -2505,11 +2508,16 @@ namespace Diffusion.Toolkit.Pages
 
                 var imageLookup = _model.Images.Where(d => d is { EntryType: EntryType.File, IsEmpty: false }).ToDictionary(d => d.Id);
 
+                // Album membership has just changed, so the quick album badge can be stale too -
+                // removing an image from it through the context menu is one way to get here
+                ServiceLocator.AlbumService.RefreshQuickAlbum();
+
                 foreach (var image in updatedImages)
                 {
                     if (imageLookup.TryGetValue(image.Id, out var img))
                     {
                         img.AlbumCount = image.AlbumCount;
+                        img.IsInQuickAlbum = ServiceLocator.AlbumService.IsInQuickAlbum(img.Id);
                     }
                 }
             }
