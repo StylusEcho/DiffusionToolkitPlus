@@ -57,6 +57,9 @@ namespace Diffusion.Toolkit
 
         private void OpenQueryBar()
         {
+            // The query is locked for the duration of a review
+            if (_model.IsReviewing) return;
+
             QueryPopup.IsOpen = true;
             QueryInput.SelectionStart = 0;
             QueryInput.SelectionLength = QueryInput.Text.Length;
@@ -107,9 +110,13 @@ namespace Diffusion.Toolkit
 
         private void QueryClear_OnMouseDown(object sender, MouseButtonEventArgs e)
         {
+            e.Handled = true;
+
+            // Clearing the query re-searches, which a review has locked
+            if (_model.IsReviewing) return;
+
             QueryInput.Text = "";
             _search.ClearQueryFilter();
-            e.Handled = true;
         }
 
         private void QueryHelp_OnMouseDown(object sender, MouseButtonEventArgs e)

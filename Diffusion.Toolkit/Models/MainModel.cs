@@ -400,6 +400,46 @@ public class MainModel : BaseNotify
         set;
     }
 
+    /// <summary>
+    /// Starts a review, leaves the running one, or picks the last one back up - whichever the
+    /// current state calls for.
+    /// </summary>
+    public ICommand ToggleReviewCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
+    /// Throws away a paused review rather than resuming it.
+    /// </summary>
+    public ICommand DiscardReviewCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
+    /// True while a review is running. The controls that would change which images are on screen
+    /// are locked out for the duration, so the user can work through the pages without the set
+    /// moving underneath them.
+    /// </summary>
+    public bool IsReviewing
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
+    /// True when there is a review to go back to, running or paused. Drives whether the button
+    /// offers to start one or to resume.
+    /// </summary>
+    public bool HasReviewSession
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
     public ICommand RescanResults
     {
         get;

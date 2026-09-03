@@ -1,5 +1,6 @@
 using Diffusion.Civitai.Models;
 using Diffusion.Common;
+using System.Text.Json;
 using Diffusion.Common.Query;
 using Diffusion.Database;
 using Diffusion.Database.Models;
@@ -191,6 +192,16 @@ namespace Diffusion.Toolkit.Pages
                 // model and tag collections a search reads aren't populated yet, so wait.
                 if (ServiceLocator.MainModel.IsLoadingLibrary) return;
 
+                // Coming back from Settings, Prompts or Models during a review puts the review
+                // back rather than searching afresh, which is what would lose the user's place
+                var review = ServiceLocator.ExtendedSettings.ReviewSession;
+
+                if (ServiceLocator.MainModel.IsReviewing && review != null)
+                {
+                    ApplyReview(review);
+                    return;
+                }
+
                 SearchImages(null);
             }
 
@@ -368,6 +379,9 @@ namespace Diffusion.Toolkit.Pages
             _model.PageChangedCommand = new RelayCommand<PageChangedEventArgs>((o) =>
             {
                 ReloadMatches(new ReloadOptions() { Focus = true, CursorPosition = o.CursorPosition, OnCompleted = o.OnCompleted });
+
+                // Working through the pages is the progress a review is tracking
+                SaveReviewProgress();
             });
 
             void PopulateViews()
@@ -636,6 +650,9 @@ namespace Diffusion.Toolkit.Pages
 
         public void ShowFilter()
         {
+            // Locked during a review - the filter is half of what decides which images are in it
+            if (_model.MainModel.IsReviewing) return;
+
             _model.IsFilterVisible = true;
         }
 
@@ -803,7 +820,11 @@ namespace Diffusion.Toolkit.Pages
             return paths.Count == 0 ? null : paths;
         }
 
-        public void SearchImages(QueryOptions? queryOptions, bool focus = false)
+        /// <param name="startPage">
+        /// Page to land on rather than the first. Resuming a review needs this: the page is settled
+        /// here, inside a continuation, so a caller cannot usefully set it afterwards.
+        /// </param>
+        public void SearchImages(QueryOptions? queryOptions, bool focus = false, int startPage = 1)
         {
             if (!ServiceLocator.FolderService.RootFolders.Any())
             {
@@ -996,7 +1017,9 @@ namespace Diffusion.Toolkit.Pages
                             }
                         }
 
-                        _model.Page = 1;
+                        // The setter clamps, so a stored page past the end of a shrunken result
+                        // set lands on the last one rather than nowhere
+                        _model.Page = startPage;
 
                         ThumbnailListView.Model.Pages = _model.Pages;
                         ThumbnailListView.Model.Page = _model.Page;
@@ -1031,6 +1054,86 @@ namespace Diffusion.Toolkit.Pages
         }
 
         public Sorting Sorting { get; private set; }
+
+        /// <summary>
+        /// The page's own view model, for the small number of callers outside it that need to read
+        /// where the results currently are - the review, which records the page reached.
+        /// </summary>
+        public SearchModel Model => _model;
+
+        /// <summary>
+        /// Snapshots the view a review is being started against.
+        /// </summary>
+        /// <remarks>
+        /// The query is cloned rather than referenced: the live one on MainModel is rebuilt and
+        /// mutated by every subsequent search, which would rewrite the session underneath itself.
+        /// A round trip through the serializer is the same thing that happens when the session is
+        /// saved, so anything that would not survive it is better found here than on reload.
+        /// </remarks>
+        public ReviewSession CaptureReview()
+        {
+            var query = JsonSerializer.Deserialize<QueryOptions>(JsonSerializer.Serialize(QueryOptions))
+                        ?? new QueryOptions();
+
+            var session = new ReviewSession
+            {
+                ModeKey = _currentModeSettings.Key,
+                SortBy = _model.SortBy,
+                SortDirection = _model.SortDirection,
+                PageSize = ServiceLocator.Settings.PageSize,
+                Page = _model.Page < 1 ? 1 : _model.Page,
+                LastImageId = _model.SelectedImageEntry?.Id ?? 0,
+                SuspendedHideNSFW = _model.MainModel.HideNSFW,
+                SuspendedHideDeleted = _model.MainModel.HideDeleted,
+                StartedUtc = DateTime.UtcNow
+            };
+
+            // Marking an image while it is being hidden by one of these would drop it out of the
+            // results and shift every page behind it, so the review runs with them off and puts
+            // them back on the way out
+            query.HideNSFW = false;
+            query.HideDeleted = false;
+
+            session.QueryOptions = query;
+
+            return session;
+        }
+
+        /// <summary>
+        /// Records where the review has got to, so the position survives even without a clean
+        /// shutdown. Cheap enough to call on every page turn - the settings write behind it is
+        /// debounced, and it does nothing at all when no review is running.
+        /// </summary>
+        public void SaveReviewProgress()
+        {
+            if (!_model.MainModel.IsReviewing) return;
+
+            ServiceLocator.ExtendedSettings.UpdateReviewProgress(_model.Page, _model.SelectedImageEntry?.Id ?? 0);
+        }
+
+        /// <summary>
+        /// Puts the view back to a review's locked query, sort and page.
+        /// </summary>
+        public void ApplyReview(ReviewSession session, bool focus = false)
+        {
+            if (session.QueryOptions == null) return;
+
+            SetView(session.ModeKey);
+
+            // Assigning either of these fires a reload of its own, so leave them alone unless they
+            // actually differ - the search below is the one that matters
+            if (!string.IsNullOrEmpty(session.SortBy) && _model.SortBy != session.SortBy)
+            {
+                _model.SortBy = session.SortBy;
+            }
+
+            if (!string.IsNullOrEmpty(session.SortDirection) && _model.SortDirection != session.SortDirection)
+            {
+                _model.SortDirection = session.SortDirection;
+            }
+
+            SearchImages(session.QueryOptions, focus, session.Page);
+        }
 
         private void ModelOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {

@@ -37,6 +37,36 @@ public class ExtendedSettings : SettingsContainer
     }
 
     /// <summary>
+    /// The review in progress, or null when there is none. Survives a restart, so a review can be
+    /// left and picked up another day.
+    /// </summary>
+    public ReviewSession? ReviewSession
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Records how far through a review the user has got.
+    /// </summary>
+    /// <remarks>
+    /// The change has to be raised by hand: UpdateValue compares with the default equality
+    /// comparer, which for a reference type means the session mutated in place still looks
+    /// identical to itself and would never be written out.
+    /// </remarks>
+    public void UpdateReviewProgress(int page, int lastImageId)
+    {
+        if (ReviewSession == null) return;
+
+        if (ReviewSession.Page == page && ReviewSession.LastImageId == lastImageId) return;
+
+        ReviewSession.Page = page;
+        ReviewSession.LastImageId = lastImageId;
+
+        RaiseSettingChanged(nameof(ReviewSession));
+    }
+
+    /// <summary>
     /// Display name overrides for root folders, keyed by folder path. Purely cosmetic - the
     /// folder on disk and the Folder row in the database are never touched.
     /// </summary>
