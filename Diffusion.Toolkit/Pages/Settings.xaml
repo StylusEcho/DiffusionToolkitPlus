@@ -192,6 +192,13 @@
                                          Text="{Binding ExtendedSettings.QuickAlbumName, RelativeSource={RelativeSource AncestorType=local:NavigationPage}, UpdateSourceTrigger=PropertyChanged}"></TextBox>
                                 <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
                             </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <CheckBox IsChecked="{Binding ExtendedSettings.SingleInstance, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
+                                          ToolTip="{lex:Loc Settings.General.SingleInstance.ToolTip}"
+                                          Content="{lex:Loc Settings.General.SingleInstance}"></CheckBox>
+                                <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                            </StackPanel>
                         </StackPanel>
                         <!--<Label Content="{lex:Loc Settings.General.ExcludedFolders}"></Label>
                         <Grid Height="100">

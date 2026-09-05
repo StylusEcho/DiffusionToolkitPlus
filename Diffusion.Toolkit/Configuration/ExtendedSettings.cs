@@ -31,6 +31,7 @@ public class ExtendedSettings : SettingsContainer
         RemoveDeletedFilesFromLibrary = true;
         AutoCollapseNavigationPane = false;
         NavigationPaneWidth = DefaultNavigationPaneWidth;
+        SingleInstance = false;
         HideRatingsBarWhileVideoPlays = true;
         VideoSectionState = AccordionState.Expanded;
         VideoMetadata = new VideoMetadataSettings();
@@ -127,6 +128,18 @@ public class ExtendedSettings : SettingsContainer
     /// Collapse the navigation pane when the pointer moves away from it.
     /// </summary>
     public bool AutoCollapseNavigationPane
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Refuse to start a second copy, handing the existing window to the front instead.
+    /// </summary>
+    /// <remarks>
+    /// Read once, at startup, so a change only takes effect on the next launch.
+    /// </remarks>
+    public bool SingleInstance
     {
         get;
         set => UpdateValue(ref field, value);

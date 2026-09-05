@@ -478,5 +478,7 @@
   "Settings.Video.HideRatingsBarWhilePlaying": "Hide the ratings bar while a video is playing (full screen)",
   "Search.Navigation.Buttons.AutoHide.ToolTip": "Auto-hide the navigation pane. When on, the pane floats over the thumbnails and hides when the pointer moves away - move it back over this bar or the left edge to bring it back. Clicking the icon of the view you are already in pins it open again.",
   "Search.Folders.Buttons.ManageRootFolders.ToolTip": "Manage Root Folders",
-  "Search.Queries.Buttons.SaveQuery.ToolTip": "Save the current search / filter"
+  "Search.Queries.Buttons.SaveQuery.ToolTip": "Save the current search / filter",
+  "Settings.General.SingleInstance": "Only allow one copy of Diffusion Toolkit to run",
+  "Settings.General.SingleInstance.ToolTip": "Launching again brings the running window to the front instead of starting a second copy. Takes effect the next time the application starts."
 }
