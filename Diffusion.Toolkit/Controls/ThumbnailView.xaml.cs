@@ -548,7 +548,7 @@ namespace Diffusion.Toolkit.Controls
             return markable;
         }
 
-        private void RateSelected(int rating)
+        public void RateSelected(int rating)
         {
             var imageEntries = GetMarkableSelection();
 
@@ -581,7 +581,7 @@ namespace Diffusion.Toolkit.Controls
             }
         }
 
-        private void UnrateSelected()
+        public void UnrateSelected()
         {
             var imageEntries = GetMarkableSelection();
 
@@ -608,7 +608,7 @@ namespace Diffusion.Toolkit.Controls
             }
         }
 
-        private void FavoriteSelected()
+        public void FavoriteSelected()
         {
             var imageEntries = GetMarkableSelection();
 
@@ -634,7 +634,7 @@ namespace Diffusion.Toolkit.Controls
             }
         }
 
-        private void NSFWSelected()
+        public void NSFWSelected()
         {
             var imageEntries = GetMarkableSelection();
 
@@ -757,7 +757,7 @@ namespace Diffusion.Toolkit.Controls
         }
 
 
-        private void DeleteSelected()
+        public void DeleteSelected()
         {
             var imageEntries = GetMarkableSelection();
 

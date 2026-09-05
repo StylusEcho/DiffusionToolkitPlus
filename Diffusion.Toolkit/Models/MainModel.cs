@@ -440,6 +440,74 @@ public class MainModel : BaseNotify
         set => SetField(ref field, value);
     }
 
+    /// <summary>
+    /// Marking and navigation that until now only existed inside the thumbnail grid's own key
+    /// handler, surfaced as commands so anything else - a menu, a key binding, an external
+    /// controller - can reach them.
+    /// </summary>
+    public ICommand RateSelectedCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    public ICommand UnrateSelectedCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    public ICommand FavoriteSelectedCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    public ICommand NSFWSelectedCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    public ICommand DeleteSelectedCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    public ICommand NextImageCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    public ICommand PreviousImageCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    public ICommand NextPageCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    public ICommand PreviousPageCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
+    /// Opens the quick album as a view, rather than adding to it.
+    /// </summary>
+    public ICommand OpenQuickAlbumCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
     public ICommand RescanResults
     {
         get;

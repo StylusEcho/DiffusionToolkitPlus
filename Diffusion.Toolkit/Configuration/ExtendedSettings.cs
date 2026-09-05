@@ -19,6 +19,12 @@ public class ExtendedSettings : SettingsContainer
     /// </summary>
     public const double DefaultNavigationPaneWidth = 250;
 
+    /// <summary>
+    /// Port the remote control listener falls back to. Sits in the private range, away from the
+    /// ports the image generators themselves tend to use.
+    /// </summary>
+    public const int DefaultRemoteControlPort = 9760;
+
     private Dictionary<string, string> _folderDisplayNames = NewNameDictionary(null);
     private VideoMetadataSettings _videoMetadata = new VideoMetadataSettings();
 
@@ -32,6 +38,8 @@ public class ExtendedSettings : SettingsContainer
         AutoCollapseNavigationPane = false;
         NavigationPaneWidth = DefaultNavigationPaneWidth;
         SingleInstance = false;
+        RemoteControlEnabled = false;
+        RemoteControlPort = DefaultRemoteControlPort;
         HideRatingsBarWhileVideoPlays = true;
         VideoSectionState = AccordionState.Expanded;
         VideoMetadata = new VideoMetadataSettings();
@@ -140,6 +148,25 @@ public class ExtendedSettings : SettingsContainer
     /// Read once, at startup, so a change only takes effect on the next launch.
     /// </remarks>
     public bool SingleInstance
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Listen on the loopback interface for commands from an external controller, such as a
+    /// Stream Deck plugin.
+    /// </summary>
+    public bool RemoteControlEnabled
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Port the remote control listener binds on 127.0.0.1.
+    /// </summary>
+    public int RemoteControlPort
     {
         get;
         set => UpdateValue(ref field, value);

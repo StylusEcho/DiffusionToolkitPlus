@@ -199,6 +199,22 @@
                                           Content="{lex:Loc Settings.General.SingleInstance}"></CheckBox>
                                 <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
                             </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <CheckBox IsChecked="{Binding ExtendedSettings.RemoteControlEnabled, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}"
+                                          ToolTip="{lex:Loc Settings.General.RemoteControl.ToolTip}"
+                                          Content="{lex:Loc Settings.General.RemoteControl}"></CheckBox>
+                                <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="20,0,0,10"
+                                        IsEnabled="{Binding ExtendedSettings.RemoteControlEnabled, RelativeSource={RelativeSource AncestorType=local:NavigationPage}}">
+                                <Label VerticalContentAlignment="Center" Padding="0,0,6,0" Content="{lex:Loc Settings.General.RemoteControlPort}"></Label>
+                                <TextBox Width="80" Padding="4"
+                                         ToolTip="{lex:Loc Settings.General.RemoteControlPort.ToolTip}"
+                                         Text="{Binding ExtendedSettings.RemoteControlPort, RelativeSource={RelativeSource AncestorType=local:NavigationPage}, UpdateSourceTrigger=LostFocus}"></TextBox>
+                                <TextBlock Style="{StaticResource SidecarBadge}"></TextBlock>
+                            </StackPanel>
                         </StackPanel>
                         <!--<Label Content="{lex:Loc Settings.General.ExcludedFolders}"></Label>
                         <Grid Height="100">

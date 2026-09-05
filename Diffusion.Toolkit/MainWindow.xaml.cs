@@ -925,6 +925,10 @@ namespace Diffusion.Toolkit
                 // it up strands the app on a screen the user cannot get past.
                 _model.EndLibraryLoad();
                 _model.Status = string.Empty;
+
+                // Only now: an external controller sending a command before the library is up
+                // would be acting on an empty view
+                ServiceLocator.RemoteControlService.Initialize();
             }
 
             if (failures.Count > 0)

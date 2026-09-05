@@ -429,5 +429,9 @@
   "Search.Folders.Buttons.ManageRootFolders.ToolTip": "Manage Root Folders",
   "Search.Queries.Buttons.SaveQuery.ToolTip": "Save the current search / filter",
   "Settings.General.SingleInstance": "Only allow one copy of Diffusion Toolkit to run",
-  "Settings.General.SingleInstance.ToolTip": "Launching again brings the running window to the front instead of starting a second copy. Takes effect the next time the application starts."
+  "Settings.General.SingleInstance.ToolTip": "Launching again brings the running window to the front instead of starting a second copy. Takes effect the next time the application starts.",
+  "Settings.General.RemoteControl": "Allow control from another application on this computer",
+  "Settings.General.RemoteControl.ToolTip": "Listens on 127.0.0.1 so an external controller, such as a Stream Deck plugin, can rate, tag and page through the library while another window has focus. Nothing outside this computer can connect.",
+  "Settings.General.RemoteControlPort": "Port",
+  "Settings.General.RemoteControlPort.ToolTip": "Port to listen on. Clients must connect to 127.0.0.1 on this port."
 }

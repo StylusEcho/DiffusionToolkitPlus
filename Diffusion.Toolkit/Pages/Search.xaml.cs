@@ -105,14 +105,18 @@ namespace Diffusion.Toolkit.Pages
 
         private ICollection<Model>? _modelLookup;
 
+        /// <summary>
+        /// This and its next page counterpart were left unimplemented, as were the service methods
+        /// that raise them, so nothing could turn a page but the pager buttons and the arrow keys.
+        /// </summary>
         private void ThumbnailNavigationServiceOnPreviousPage(object? sender, EventArgs e)
         {
-            throw new NotImplementedException();
+            ThumbnailListView.GoPrevPage(null);
         }
 
         private void ThumbnailNavigationServiceOnNextPage(object? sender, EventArgs e)
         {
-            throw new NotImplementedException();
+            ThumbnailListView.GoNextPage(null);
         }
 
         private void ThumbnailNavigationServiceOnPrevious(object? sender, EventArgs e)
@@ -250,6 +254,8 @@ namespace Diffusion.Toolkit.Pages
 
             _model = new SearchModel();
             //_model.DataStore = _dataStoreOptions;
+
+            ServiceLocator.SearchModel = _model;
 
             ServiceLocator.SearchService = new SearchService(_model.Filter, _model.SearchSettings);
             ServiceLocator.SearchService.Search += (obj, args) =>
@@ -2557,7 +2563,7 @@ namespace Diffusion.Toolkit.Pages
             _model.MainModel.AddSelectedImagesToAlbum(album);
         }
 
-        private void OpenAlbum(AlbumModel albumModel)
+        public void OpenAlbum(AlbumModel albumModel)
         {
             ServiceLocator.MainModel.CurrentAlbum = albumModel;
 
