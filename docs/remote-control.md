@@ -46,12 +46,26 @@ Sent unsolicited whenever it changes, and once when you connect, so a controller
 still correct:
 
 ```json
-{"event": "state", "page": 4, "pages": 37, "results": 1832, "reviewing": true,
- "hasReviewSession": true, "autoAdvance": false, "fitToPreview": true,
- "actualSize": false, "hasFilter": false, "busy": false}
+{"event": "state",
+ "page": 4, "pages": 37, "results": 1832,
+ "reviewing": true, "hasReviewSession": true,
+ "autoAdvance": false, "fitToPreview": true, "actualSize": false,
+ "hasFilter": false, "busy": false,
+ "view": "images",
+ "hasSelection": true, "favorite": true, "nsfw": false, "forDeletion": false,
+ "inQuickAlbum": true, "rating": 4, "infoVisible": false}
 ```
 
 A burst of changes during a page load is debounced into one message.
+
+`view` is the section showing, as the same short name the view commands use — `images`, `folders`,
+`favorites`, `deleted` — or absent when it is something else.
+
+The block from `hasSelection` down describes **the currently selected image**, so a controller can
+show a key as already on rather than guessing. `hasSelection` is false when nothing is selected or
+the file is unavailable, and the rest are then all false; `rating` is null when unrated. These
+follow the selection and update when the image is marked from the keyboard, not only from a
+controller.
 
 ## Actions
 

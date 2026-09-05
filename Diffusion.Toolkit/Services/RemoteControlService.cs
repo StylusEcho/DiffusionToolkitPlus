@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -9,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Diffusion.Common;
 using Diffusion.Toolkit.Configuration;
+using Diffusion.Toolkit.Models;
 
 namespace Diffusion.Toolkit.Services;
 
@@ -43,6 +45,7 @@ public sealed class RemoteControlService : IDisposable
     private CancellationTokenSource? _cancellation;
     private TcpListener? _listener;
     private Action? _broadcastState;
+    private ImageViewModel? _watchedImage;
     private bool _initialized;
     private bool _subscribed;
     private int _port;
@@ -313,12 +316,52 @@ public sealed class RemoteControlService : IDisposable
             ServiceLocator.MainModel.PropertyChanged += (sender, args) => _broadcastState?.Invoke();
         }
 
-        if (ServiceLocator.SearchModel != null)
+        var search = ServiceLocator.SearchModel;
+
+        if (search != null)
         {
-            ServiceLocator.SearchModel.PropertyChanged += (sender, args) => _broadcastState?.Invoke();
+            search.PropertyChanged += (sender, args) =>
+            {
+                // The image object is replaced on every selection change, so the subscription has
+                // to move with it or marking would stop being reported after the first image
+                if (args.PropertyName == nameof(SearchModel.CurrentImage))
+                {
+                    WatchCurrentImage(search.CurrentImage);
+                }
+
+                _broadcastState?.Invoke();
+            };
+
+            WatchCurrentImage(search.CurrentImage);
         }
 
         _subscribed = true;
+    }
+
+    /// <summary>
+    /// Follows how the selected image is marked, so favouriting it from the keyboard reaches a
+    /// controller as well as the window.
+    /// </summary>
+    private void WatchCurrentImage(ImageViewModel? image)
+    {
+        if (ReferenceEquals(_watchedImage, image)) return;
+
+        if (_watchedImage != null)
+        {
+            _watchedImage.PropertyChanged -= OnCurrentImageChanged;
+        }
+
+        _watchedImage = image;
+
+        if (_watchedImage != null)
+        {
+            _watchedImage.PropertyChanged += OnCurrentImageChanged;
+        }
+    }
+
+    private void OnCurrentImageChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        _broadcastState?.Invoke();
     }
 
     private void BroadcastState()
@@ -338,6 +381,12 @@ public sealed class RemoteControlService : IDisposable
         var main = ServiceLocator.MainModel;
         var search = ServiceLocator.SearchModel;
 
+        var image = main?.CurrentImage;
+
+        // An unavailable file is built without an id, and the padding entries that fill out a page
+        // sit at id 0 as well, so neither counts as something a controller can act on
+        var hasSelection = image is { Id: > 0 };
+
         var payload = new
         {
             @event = "state",
@@ -350,10 +399,35 @@ public sealed class RemoteControlService : IDisposable
             fitToPreview = main?.FitToPreview ?? false,
             actualSize = main?.ActualSize ?? false,
             hasFilter = main?.HasFilter ?? false,
-            busy = main?.IsBusy ?? false
+            busy = main?.IsBusy ?? false,
+
+            // How the current image is marked, so a controller can show a key as already on
+            hasSelection,
+            favorite = hasSelection && image!.Favorite,
+            nsfw = hasSelection && image!.NSFW,
+            forDeletion = hasSelection && image!.ForDeletion,
+            inQuickAlbum = hasSelection && image!.IsInQuickAlbum,
+            rating = hasSelection ? image!.Rating : null,
+            infoVisible = hasSelection && image!.IsParametersVisible,
+
+            view = CurrentView()
         };
 
         return JsonSerializer.Serialize(payload, JsonOptions);
+    }
+
+    /// <summary>
+    /// Which section of the library is showing, as the same short name the view commands take.
+    /// </summary>
+    private static string? CurrentView()
+    {
+        var url = ServiceLocator.NavigatorService?.CurrentUrl;
+
+        if (string.IsNullOrEmpty(url)) return null;
+
+        var hash = url.IndexOf('#');
+
+        return hash >= 0 && hash < url.Length - 1 ? url[(hash + 1)..] : null;
     }
 
     public void Dispose()
