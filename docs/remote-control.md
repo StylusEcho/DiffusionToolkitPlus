@@ -51,7 +51,7 @@ still correct:
  "reviewing": true, "hasReviewSession": true,
  "autoAdvance": false, "fitToPreview": true, "actualSize": false,
  "hasFilter": false, "busy": false,
- "view": "images",
+ "view": "images", "hasPopup": false,
  "hasSelection": true, "favorite": true, "nsfw": false, "forDeletion": false,
  "inQuickAlbum": true, "rating": 4, "infoVisible": false}
 ```
@@ -59,7 +59,8 @@ still correct:
 A burst of changes during a page load is debounced into one message.
 
 `view` is the section showing, as the same short name the view commands use — `images`, `folders`,
-`favorites`, `deleted` — or absent when it is something else.
+`favorites`, `deleted` — or absent when it is something else. `hasPopup` says a dialogue is waiting
+to be answered, which changes what `view.deleted` does — see below.
 
 The block from `hasSelection` down describes **the currently selected image**, so a controller can
 show a key as already on rather than guessing. `hasSelection` is false when nothing is selected or
@@ -92,7 +93,8 @@ Unavailable files are skipped with a toast rather than failing the whole call.
 
 | Action | Value | |
 |---|---|---|
-| `view.folders` / `view.images` / `view.favorites` / `view.deleted` | | Switch library section |
+| `view.folders` / `view.images` / `view.favorites` | | Switch library section |
+| `view.deleted` | | Go to the bin; see below |
 | `quickalbum.open` | | Open the quick album as a view |
 | `filter.type` | `"Image"` or `"Video"` | Toggle that media type in the filter |
 | `filter.clear` | | Clear the query and filter |
@@ -100,6 +102,16 @@ Unavailable files are skipped with a toast rather than failing the whole call.
 All of these change which images are on screen, so **all of them are refused while a review is
 running**, exactly as the equivalent controls are disabled in the window. They return
 `locked while reviewing`.
+
+`view.deleted` does three things in turn, so one key can empty the bin without a pointer:
+
+1. Not in the bin → go there.
+2. Already in the bin → start emptying it, which raises the confirmation.
+3. A dialogue is waiting → answer it affirmatively, as clicking Yes would.
+
+Step 3 is checked first and is not limited to the bin's own dialogue: pressing a key that raised a
+dialogue should not be ignored because the view underneath it changed. `hasPopup` in the state
+tells a controller which press it is about to send.
 
 ### Everything else
 

@@ -225,4 +225,23 @@ public class MessagePopupManager
             }
         });
     }
+
+    /// <summary>
+    /// True while a popup is waiting to be answered.
+    /// </summary>
+    public bool HasPopup => _popups.Count > 0;
+
+    /// <summary>
+    /// Answers the popup on top as though its affirmative button had been clicked.
+    /// </summary>
+    /// <returns>False when nothing is waiting, or it has no affirmative button.</returns>
+    public bool Confirm()
+    {
+        return _dispatcher.Invoke(() =>
+        {
+            var popup = _popups.LastOrDefault();
+
+            return popup != null && popup.Confirm();
+        });
+    }
 }

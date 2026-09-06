@@ -410,7 +410,11 @@ public sealed class RemoteControlService : IDisposable
             rating = hasSelection ? image!.Rating : null,
             infoVisible = hasSelection && image!.IsParametersVisible,
 
-            view = CurrentView()
+            view = CurrentView(),
+
+            // Something is waiting to be answered, so a key that would normally navigate is a
+            // confirmation instead
+            hasPopup = ServiceLocator.MessageService?.HasPopup ?? false
         };
 
         return JsonSerializer.Serialize(payload, JsonOptions);

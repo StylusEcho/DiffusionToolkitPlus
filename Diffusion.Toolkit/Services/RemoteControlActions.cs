@@ -55,7 +55,7 @@ public class RemoteControlActions
             ["view.folders"] = _ => Execute(Main?.GotoUrl, "search/#folders"),
             ["view.images"] = _ => Execute(Main?.GotoUrl, "search/#images"),
             ["view.favorites"] = _ => Execute(Main?.GotoUrl, "search/#favorites"),
-            ["view.deleted"] = _ => Execute(Main?.GotoUrl, "search/#deleted"),
+            ["view.deleted"] = _ => GoToBin(),
 
             ["quickalbum.toggle"] = _ => Execute(Main?.ToggleQuickAlbumCommand),
             ["quickalbum.open"] = _ => Execute(Main?.OpenQuickAlbumCommand),
@@ -132,6 +132,45 @@ public class RemoteControlActions
         });
 
         return completion.Task;
+    }
+
+    /// <summary>
+    /// One key does the whole emptying: go to the bin, ask, confirm.
+    /// </summary>
+    /// <remarks>
+    /// Pressing it again while already in the bin starts the empty, and pressing it once more
+    /// answers the confirmation. A controller has no pointer to click Yes with, so without this the
+    /// dialogue it raised could only be dismissed at the keyboard - which rather defeats driving
+    /// the application from somewhere else.
+    ///
+    /// The confirmation check comes first and is not limited to the bin's own dialogue: pressing a
+    /// key that raised a dialogue should not then be ignored because the view underneath it
+    /// changed. A review locks this key out entirely, so it cannot raise one to be stuck with.
+    /// </remarks>
+    private static void GoToBin()
+    {
+        if (ServiceLocator.MessageService is { HasPopup: true } messages)
+        {
+            if (!messages.Confirm()) throw new ArgumentException("nothing to confirm");
+
+            return;
+        }
+
+        if (IsShowingBin())
+        {
+            _ = ServiceLocator.FileService.RemoveImagesTaggedForDeletion();
+
+            return;
+        }
+
+        Execute(Main?.GotoUrl, "search/#deleted");
+    }
+
+    private static bool IsShowingBin()
+    {
+        var url = ServiceLocator.NavigatorService?.CurrentUrl;
+
+        return url != null && url.EndsWith("#deleted", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void Execute(ICommand? command, object? parameter = null)
