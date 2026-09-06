@@ -107,7 +107,11 @@ namespace Diffusion.Database
         {
             using var db = OpenConnection();
 
-            var query = $"SELECT * FROM {nameof(Album)} WHERE Name = @Name LIMIT 1";
+            // NOCASE to match how the album list decides which album is the quick one, which
+            // compares case-insensitively. Case-sensitive here meant a stored name differing only
+            // in case was never found - so the quick album badge could not resolve, and the
+            // shortcut would quietly create a second album alongside the real one.
+            var query = $"SELECT * FROM {nameof(Album)} WHERE Name = @Name COLLATE NOCASE LIMIT 1";
 
             var command = db.CreateCommand(query);
 

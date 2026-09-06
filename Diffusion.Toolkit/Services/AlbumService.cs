@@ -51,6 +51,15 @@ public class AlbumService
     public bool IsInQuickAlbum(int imageId) => _quickAlbumImageIds.Contains(imageId);
 
     /// <summary>
+    /// The album the quick collection shortcut targets, or null when it does not exist yet -
+    /// nothing creates it until something is first added.
+    /// </summary>
+    public AlbumModel? GetQuickAlbum()
+    {
+        return ServiceLocator.MainModel?.Albums?.FirstOrDefault(a => a.IsQuickAlbum);
+    }
+
+    /// <summary>
     /// Lightroom style quick collection. Adds the selection to a single named album, or takes it
     /// out again when everything selected is already in there.
     /// </summary>

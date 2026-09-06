@@ -139,6 +139,7 @@ namespace Diffusion.Toolkit
                 InitTags();
                 InitAlbums();
                 InitQueries();
+                InitReview();
 
                 _model.Refresh = new RelayCommand<object>((o) => Refresh());
 
@@ -833,6 +834,17 @@ namespace Diffusion.Toolkit
                     return;
                 }
 
+                // A review locks which images are on screen, and switching library section runs a
+                // fresh search - that is exactly what would lose the user's place. Settings,
+                // Prompts and Models are left reachable; returning to the library puts the review
+                // back rather than searching again.
+                if (_model.IsReviewing && url != null && url.StartsWith("search", StringComparison.OrdinalIgnoreCase))
+                {
+                    ServiceLocator.ToastService.Toast(
+                        GetLocalizedText("Review.Locked.Message"), GetLocalizedText("Review.Caption"));
+                    return;
+                }
+
                 _navigatorService.Goto(url);
             });
 
@@ -913,6 +925,10 @@ namespace Diffusion.Toolkit
                 // it up strands the app on a screen the user cannot get past.
                 _model.EndLibraryLoad();
                 _model.Status = string.Empty;
+
+                // Only now: an external controller sending a command before the library is up
+                // would be acting on an empty view
+                ServiceLocator.RemoteControlService.Initialize();
             }
 
             if (failures.Count > 0)

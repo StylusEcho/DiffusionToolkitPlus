@@ -243,9 +243,14 @@
                             </BlurEffect>
                         </local:Thumbnail.Effect>
                     </local:Thumbnail>
-                    <!-- Spans the whole thumbnail so badges can be pinned to individual corners -->
+                    <!-- Spans the whole thumbnail so badges can be pinned to individual corners.
+                         Sized the same way the thumbnail itself is rather than left to stretch,
+                         so the corners it measures from are the ones actually on screen -->
                     <local:ThumbnailIcons
                         Data="{Binding .}"
+                        Height="{Binding DataContext.ThumbnailSize, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                        Width="{Binding DataContext.ThumbnailSize, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                        VerticalAlignment="Top"
                         IsHitTestVisible="False"
                         ></local:ThumbnailIcons>
                     <Label Grid.Row="1" Foreground="{DynamicResource ForegroundBrush}"  HorizontalContentAlignment="Center">

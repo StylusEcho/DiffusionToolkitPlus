@@ -19,6 +19,12 @@ public class ExtendedSettings : SettingsContainer
     /// </summary>
     public const double DefaultNavigationPaneWidth = 250;
 
+    /// <summary>
+    /// Port the remote control listener falls back to. Sits in the private range, away from the
+    /// ports the image generators themselves tend to use.
+    /// </summary>
+    public const int DefaultRemoteControlPort = 9760;
+
     private Dictionary<string, string> _folderDisplayNames = NewNameDictionary(null);
     private VideoMetadataSettings _videoMetadata = new VideoMetadataSettings();
 
@@ -31,9 +37,42 @@ public class ExtendedSettings : SettingsContainer
         RemoveDeletedFilesFromLibrary = true;
         AutoCollapseNavigationPane = false;
         NavigationPaneWidth = DefaultNavigationPaneWidth;
+        SingleInstance = false;
+        RemoteControlEnabled = false;
+        RemoteControlPort = DefaultRemoteControlPort;
         HideRatingsBarWhileVideoPlays = true;
         VideoSectionState = AccordionState.Expanded;
         VideoMetadata = new VideoMetadataSettings();
+    }
+
+    /// <summary>
+    /// The review in progress, or null when there is none. Survives a restart, so a review can be
+    /// left and picked up another day.
+    /// </summary>
+    public ReviewSession? ReviewSession
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Records how far through a review the user has got.
+    /// </summary>
+    /// <remarks>
+    /// The change has to be raised by hand: UpdateValue compares with the default equality
+    /// comparer, which for a reference type means the session mutated in place still looks
+    /// identical to itself and would never be written out.
+    /// </remarks>
+    public void UpdateReviewProgress(int page, int lastImageId)
+    {
+        if (ReviewSession == null) return;
+
+        if (ReviewSession.Page == page && ReviewSession.LastImageId == lastImageId) return;
+
+        ReviewSession.Page = page;
+        ReviewSession.LastImageId = lastImageId;
+
+        RaiseSettingChanged(nameof(ReviewSession));
     }
 
     /// <summary>
@@ -97,6 +136,37 @@ public class ExtendedSettings : SettingsContainer
     /// Collapse the navigation pane when the pointer moves away from it.
     /// </summary>
     public bool AutoCollapseNavigationPane
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Refuse to start a second copy, handing the existing window to the front instead.
+    /// </summary>
+    /// <remarks>
+    /// Read once, at startup, so a change only takes effect on the next launch.
+    /// </remarks>
+    public bool SingleInstance
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Listen on the loopback interface for commands from an external controller, such as a
+    /// Stream Deck plugin.
+    /// </summary>
+    public bool RemoteControlEnabled
+    {
+        get;
+        set => UpdateValue(ref field, value);
+    }
+
+    /// <summary>
+    /// Port the remote control listener binds on 127.0.0.1.
+    /// </summary>
+    public int RemoteControlPort
     {
         get;
         set => UpdateValue(ref field, value);

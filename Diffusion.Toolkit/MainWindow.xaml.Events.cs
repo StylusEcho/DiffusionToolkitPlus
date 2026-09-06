@@ -66,6 +66,8 @@ namespace Diffusion.Toolkit
                 _search.ThumbnailListView.FocusCurrentItem();
             });
 
+            InitSelectionCommands();
+
             _model.SetThumbnailSize = new RelayCommand<object>((o) => SetThumbnailSize(int.Parse((string)o)));
             _model.TogglePreview = new RelayCommand<object>((o) => TogglePreview());
             _model.PoputPreview = new RelayCommand<object>((o) => PopoutPreview(true, true, false));
@@ -199,6 +201,47 @@ namespace Diffusion.Toolkit
             _search.ToggleInfo();
         }
 
+        /// <summary>
+        /// Marking and moving through results were only ever reachable from the thumbnail grid's
+        /// own key handler. Surfacing them as commands lets anything else drive them - the review
+        /// mode workflow, a future key binding, or an external controller - without either
+        /// duplicating the logic or reaching into the control.
+        /// </summary>
+        private void InitSelectionCommands()
+        {
+            _model.RateSelectedCommand = new RelayCommand<object>((o) =>
+            {
+                if (o == null) return;
+
+                // The parameter arrives as a string from XAML and as an int from code
+                var rating = o as int? ?? (int.TryParse(o.ToString(), out var parsed) ? parsed : 0);
+
+                if (rating is < 1 or > 10) return;
+
+                _search.ThumbnailListView.RateSelected(rating);
+            });
+
+            _model.UnrateSelectedCommand = new RelayCommand<object>((o) => _search.ThumbnailListView.UnrateSelected());
+            _model.FavoriteSelectedCommand = new RelayCommand<object>((o) => _search.ThumbnailListView.FavoriteSelected());
+            _model.NSFWSelectedCommand = new RelayCommand<object>((o) => _search.ThumbnailListView.NSFWSelected());
+            _model.DeleteSelectedCommand = new RelayCommand<object>((o) => _search.ThumbnailListView.DeleteSelected());
+
+            _model.NextImageCommand = new RelayCommand<object>((o) => ServiceLocator.ThumbnailNavigationService.MoveNext());
+            _model.PreviousImageCommand = new RelayCommand<object>((o) => ServiceLocator.ThumbnailNavigationService.MovePrevious());
+            _model.NextPageCommand = new RelayCommand<object>((o) => ServiceLocator.ThumbnailNavigationService.MoveNextPage());
+            _model.PreviousPageCommand = new RelayCommand<object>((o) => ServiceLocator.ThumbnailNavigationService.MovePreviousPage());
+
+            _model.OpenQuickAlbumCommand = new RelayCommand<object>((o) =>
+            {
+                var album = ServiceLocator.AlbumService.GetQuickAlbum();
+
+                // Nothing creates the quick album until something is first added to it
+                if (album == null) return;
+
+                _search.OpenAlbum(album);
+            });
+        }
+
         private void ShowAbout()
         {
             //var welcome = new WelcomeWindow(_settings!);
@@ -264,6 +307,10 @@ namespace Diffusion.Toolkit
             try
             {
                 Logger.Log("Attempting to shut down...");
+
+                // Stop accepting remote connections before anything is torn down, so a command
+                // cannot arrive part way through shutdown
+                ServiceLocator.RemoteControlService.Dispose();
 
                 if (_settings.IsDirty())
                 {

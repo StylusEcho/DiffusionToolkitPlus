@@ -144,15 +144,19 @@
                     </Border>
 
                 </StackPanel>
-                <Label Grid.Column="3" FontSize="12" VerticalContentAlignment="Center" Content="{lex:Loc Search.SortBy}"></Label>
-                <ComboBox Height="28" VerticalContentAlignment="Center" ItemsSource="{Binding SortOptions}" DisplayMemberPath="Name" SelectedValue="{Binding SortBy}" SelectedValuePath="Value"  Grid.Column="4" Margin="0,0,10,0">
+                <Label Grid.Column="3" FontSize="12" VerticalContentAlignment="Center" Content="{lex:Loc Search.SortBy}"
+                       IsEnabled="{Binding MainModel.IsReviewing, Converter={StaticResource InvertBoolConverter}}"></Label>
+                <ComboBox Height="28" VerticalContentAlignment="Center" ItemsSource="{Binding SortOptions}" DisplayMemberPath="Name" SelectedValue="{Binding SortBy}" SelectedValuePath="Value"  Grid.Column="4" Margin="0,0,10,0"
+                          IsEnabled="{Binding MainModel.IsReviewing, Converter={StaticResource InvertBoolConverter}}">
                 </ComboBox>
-                <ComboBox Height="28" Width="60" VerticalContentAlignment="Center" ItemsSource="{Binding SortOrderOptions}" DisplayMemberPath="Name" SelectedValue="{Binding SortDirection}" SelectedValuePath="Value" Grid.Column="5" Margin="0,0,10,0">
+                <ComboBox Height="28" Width="60" VerticalContentAlignment="Center" ItemsSource="{Binding SortOrderOptions}" DisplayMemberPath="Name" SelectedValue="{Binding SortDirection}" SelectedValuePath="Value" Grid.Column="5" Margin="0,0,10,0"
+                          IsEnabled="{Binding MainModel.IsReviewing, Converter={StaticResource InvertBoolConverter}}">
                 </ComboBox>
 
                 <!-- Media type filters. These drive the same Filter.Types checkboxes as the Filter
                      window, so the two stay in step and neither excludes the other -->
-                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0"
+                            IsEnabled="{Binding MainModel.IsReviewing, Converter={StaticResource InvertBoolConverter}}">
                     <Button Width="28" Height="28" Style="{StaticResource BorderlessButton}"
                             ToolTip="{lex:Loc Filter.Metadata.Types.Image}"
                             Command="{Binding ToggleTypeFilterCommand}" CommandParameter="Image">
@@ -290,7 +294,10 @@
                                        MouseLeave="NavigationPane_OnMouseLeave">
 
                                 <Grid>
-                                <ScrollViewer Focusable="True" x:Name="NavigationScrollViewer" VerticalScrollBarVisibility="Auto">
+                                <!-- Every list in here re-runs the search when clicked, so the whole
+                                     pane is locked out while a review is running -->
+                                <ScrollViewer Focusable="True" x:Name="NavigationScrollViewer" VerticalScrollBarVisibility="Auto"
+                                              IsEnabled="{Binding MainModel.IsReviewing, Converter={StaticResource InvertBoolConverter}}">
                                 <StackPanel>
                                     <!--<controls:AccordionControl HeaderBackground="#80000000" Margin="0,0,0,5"
                                                                Visibility="{Binding DataContext.MainModel.Settings.NavigationSection.ShowDate, Converter={StaticResource boolToVisCol}, ElementName=NavigationThumbnailGrid}"
