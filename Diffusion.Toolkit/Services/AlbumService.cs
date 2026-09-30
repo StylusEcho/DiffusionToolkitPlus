@@ -150,6 +150,14 @@ public class AlbumService
         {
             await ReloadAlbums();
         }
+
+        // Adding to the quick album is marking, like a rating or a favourite, so it advances the
+        // same way. Taking something out does not: that is a correction to the image in front of
+        // you, and moving on would hide the result.
+        if (!isRemoval && ServiceLocator.Settings.AutoAdvance)
+        {
+            ServiceLocator.ThumbnailNavigationService.MoveNext();
+        }
     }
 
     public void UpdateSelectedImageAlbums()
