@@ -1458,6 +1458,20 @@ namespace Diffusion.Toolkit.Pages
             var restoreImageId = 0;
             var gridHadFocus = false;
 
+            // Whoever asked for the reload may be holding something until it hears back - arrow
+            // key navigation switches itself off while a page turns - so it has to hear back once,
+            // and only once, whether or not the reload worked
+            var completed = false;
+
+            void Complete()
+            {
+                if (completed) return;
+
+                completed = true;
+
+                options?.OnCompleted?.Invoke();
+            }
+
             Task.Run(() =>
             {
                 Dispatcher.Invoke(() =>
@@ -1477,7 +1491,7 @@ namespace Diffusion.Toolkit.Pages
                     ThumbnailListView.ResetView(options);
                     Dispatcher.Invoke(() =>
                     {
-                        options?.OnCompleted?.Invoke();
+                        Complete();
 
                         if (options is not null && _model.Images is { Count: > 0 })
                         {
@@ -1531,9 +1545,23 @@ namespace Diffusion.Toolkit.Pages
 
                     });
                 }
+                catch (Exception ex)
+                {
+                    // This runs on a task nobody awaits, so without this a failure disappears
+                    // without trace and all that is left is a page that did not load
+                    Logger.Log($"Reloading results failed{Environment.NewLine}{ex}");
+                }
                 finally
                 {
                     _model.IsBusy = false;
+
+                    // On failure the callback above never ran. Previously that left paging latched
+                    // on, and arrow key navigation - in the grid and the full screen viewer alike -
+                    // stayed dead until the application was restarted
+                    if (!completed)
+                    {
+                        Dispatcher.Invoke(() => Complete());
+                    }
                 }
 
             });
