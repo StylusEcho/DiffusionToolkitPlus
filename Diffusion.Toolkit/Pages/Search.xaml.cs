@@ -57,6 +57,12 @@ namespace Diffusion.Toolkit.Pages
         public Action? OnCompleted { get; set; }
         public CursorPosition CursorPosition { get; set; }
         public bool IsEmpty { get; set; }
+
+        /// <summary>
+        /// Image to select once the page has loaded, when it is not simply the one already
+        /// selected - going back to a saved position, say. Zero keeps the current selection.
+        /// </summary>
+        public int SelectImageId { get; set; }
     }
 
     public class ModeSettings
@@ -830,7 +836,7 @@ namespace Diffusion.Toolkit.Pages
         /// Page to land on rather than the first. Resuming a review needs this: the page is settled
         /// here, inside a continuation, so a caller cannot usefully set it afterwards.
         /// </param>
-        public void SearchImages(QueryOptions? queryOptions, bool focus = false, int startPage = 1)
+        public void SearchImages(QueryOptions? queryOptions, bool focus = false, int startPage = 1, int selectImageId = 0)
         {
             if (!ServiceLocator.FolderService.RootFolders.Any())
             {
@@ -1033,7 +1039,7 @@ namespace Diffusion.Toolkit.Pages
                         ThumbnailListView.SetPagingEnabled();
                     });
 
-                    ReloadMatches(new ReloadOptions() { Focus = focus, IsEmpty = count == 0 });
+                    ReloadMatches(new ReloadOptions() { Focus = focus, IsEmpty = count == 0, SelectImageId = selectImageId });
                 })
                 .ContinueWith(d =>
                 {
@@ -1118,7 +1124,8 @@ namespace Diffusion.Toolkit.Pages
         }
 
         /// <summary>
-        /// Puts the view back to a review's locked query, sort and page.
+        /// Puts the view back to a saved query, sort, page and selected image - a review's, or the
+        /// view that was showing before one started.
         /// </summary>
         public void ApplyReview(ReviewSession session, bool focus = false)
         {
@@ -1138,7 +1145,24 @@ namespace Diffusion.Toolkit.Pages
                 _model.SortDirection = session.SortDirection;
             }
 
-            SearchImages(session.QueryOptions, focus, session.Page);
+            SearchImages(session.QueryOptions, focus, session.Page, session.LastImageId);
+        }
+
+        /// <summary>
+        /// The view as it stands, to come back to after a review has taken it over.
+        /// </summary>
+        /// <remarks>
+        /// The same snapshot a review is started from, except that it keeps the user's own hide
+        /// settings in the query: the review switches them off, and this has to put them back.
+        /// </remarks>
+        public ReviewSession CaptureView()
+        {
+            var view = CaptureReview();
+
+            view.QueryOptions!.HideNSFW = view.SuspendedHideNSFW;
+            view.QueryOptions.HideDeleted = view.SuspendedHideDeleted;
+
+            return view;
         }
 
         private void ModelOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -1481,7 +1505,9 @@ namespace Diffusion.Toolkit.Pages
                     // Remember what the user was on before the reload takes it away. The entries
                     // are recycled in place and a new image shifts everything along, so the id is
                     // the only thing that still means the same afterwards.
-                    restoreImageId = _model.SelectedImageEntry?.Id ?? 0;
+                    restoreImageId = options is { SelectImageId: > 0 }
+                        ? options.SelectImageId
+                        : _model.SelectedImageEntry?.Id ?? 0;
                     gridHadFocus = ThumbnailListView.IsKeyboardFocusWithin;
                 });
 

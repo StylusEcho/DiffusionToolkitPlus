@@ -13,6 +13,16 @@ namespace Diffusion.Toolkit
         /// </summary>
         private const string RandomSort = "Random";
 
+        /// <summary>
+        /// What was on screen before the review took the view over, so leaving the review goes
+        /// back there rather than stranding the user in the review's results.
+        /// </summary>
+        /// <remarks>
+        /// Held in memory only. A review left running is paused on restart, so there is never a
+        /// view from a previous session to return to - resuming takes a fresh snapshot.
+        /// </remarks>
+        private ReviewSession? _viewBeforeReview;
+
         private void InitReview()
         {
             _model.ToggleReviewCommand = new AsyncCommand<object>(async (o) => await ToggleReview());
@@ -57,6 +67,8 @@ namespace Diffusion.Toolkit
 
             var session = _search.CaptureReview();
 
+            _viewBeforeReview = _search.CaptureView();
+
             ServiceLocator.ExtendedSettings.ReviewSession = session;
 
             _model.HasReviewSession = true;
@@ -77,16 +89,30 @@ namespace Diffusion.Toolkit
         {
             var session = ServiceLocator.ExtendedSettings.ReviewSession;
 
+            // Has to come before the flag is cleared: it does nothing when no review is running,
+            // so in the other order it never recorded anything. Now that resuming goes back to
+            // the image as well as the page, the image at the moment of leaving is what counts.
+            if (session != null)
+            {
+                _search.SaveReviewProgress();
+            }
+
             _model.IsReviewing = false;
 
             if (session == null) return;
-
-            _search.SaveReviewProgress();
 
             _model.HideNSFW = session.SuspendedHideNSFW;
             _model.HideDeleted = session.SuspendedHideDeleted;
 
             _model.HasReviewSession = true;
+
+            // Back to whatever was showing before the review - which also brings the hide settings
+            // back into the query, since a search takes them from the query it is given
+            if (_viewBeforeReview != null)
+            {
+                _search.ApplyReview(_viewBeforeReview, true);
+                _viewBeforeReview = null;
+            }
 
             ServiceLocator.ToastService.Toast(GetLocalizedText("Review.Paused.Message"), GetLocalizedText("Review.Caption"));
         }
@@ -96,6 +122,8 @@ namespace Diffusion.Toolkit
             var session = ServiceLocator.ExtendedSettings.ReviewSession;
 
             if (session == null) return;
+
+            _viewBeforeReview = _search.CaptureView();
 
             _model.IsReviewing = true;
 
