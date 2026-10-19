@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
@@ -73,6 +74,13 @@ namespace Diffusion.Toolkit
         private bool _scrubbing;
         private bool _updatingScrub;
 
+        private bool _bottomBarShown;
+
+        /// <summary>
+        /// Hides the control bar a while after the pointer leaves it, as the viewer's does.
+        /// </summary>
+        private readonly DispatcherTimer _hideBottomBar = new() { Interval = TimeSpan.FromSeconds(2) };
+
         public CompareWindow(Side a, Side b)
         {
             InitializeComponent();
@@ -84,6 +92,12 @@ namespace Diffusion.Toolkit
             Panel.SetZIndex(_left.Layer, -2);
             Panel.SetZIndex(_right.Layer, -1);
 
+            _hideBottomBar.Tick += (_, _) =>
+            {
+                _hideBottomBar.Stop();
+                SetBottomBarShown(false);
+            };
+
             Loaded += OnLoaded;
         }
 
@@ -93,6 +107,9 @@ namespace Diffusion.Toolkit
 
             // By now the window has been placed over its owner, so maximising fills that monitor
             WindowState = WindowState.Maximized;
+
+            // The same width rule as the viewer's bar, so the two are the same size
+            VideoBar.MaxWidth = PreviewWindow.GetControlBarMaxWidth(new WindowInteropHelper(this).Handle);
         }
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -189,7 +206,9 @@ namespace Diffusion.Toolkit
 
             BuildClock(TimeSpan.Zero, paused: false);
 
-            VideoBar.Visibility = Visibility.Visible;
+            BottomBar.Visibility = Visibility.Visible;
+
+            UpdateLoopIcon();
 
             _ticker = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(50) };
             _ticker.Tick += (_, _) => UpdateTransport();
@@ -218,9 +237,13 @@ namespace Diffusion.Toolkit
         {
             StopClock();
 
+            // Follows the viewer's loop setting. Off, the pair plays through once and stops with
+            // both on their last frames
             var group = new ParallelTimeline
             {
-                RepeatBehavior = RepeatBehavior.Forever
+                RepeatBehavior = ServiceLocator.Settings?.LoopVideo == false
+                    ? new RepeatBehavior(1)
+                    : RepeatBehavior.Forever
             };
 
             // Sized to the longer clip. Left automatic only when nothing could be read, in which
@@ -335,11 +358,19 @@ namespace Diffusion.Toolkit
 
         private TimeSpan CurrentPosition() => _clock?.CurrentTime ?? TimeSpan.Zero;
 
+        /// <summary>Played through to the end with looping off, and holding there.</summary>
+        private bool HasEnded() => _clock?.CurrentState == ClockState.Filling;
+
         private void TogglePlay()
         {
             if (_clock?.Controller == null) return;
 
-            if (_clock.IsPaused)
+            if (HasEnded())
+            {
+                // Played through with looping off - play again from the start, as the viewer does
+                _clock.Controller.Begin();
+            }
+            else if (_clock.IsPaused)
             {
                 _clock.Controller.Resume();
             }
@@ -403,17 +434,90 @@ namespace Diffusion.Toolkit
                 _updatingScrub = false;
             }
 
-            var frame = (long)Math.Round(position.TotalSeconds * _frameRate);
+            // Written the way the viewer writes it
+            TimeText.Text = $"{PreviewModel.FormatTime(position.TotalSeconds)} / {PreviewModel.FormatTime(_duration.TotalSeconds)}";
 
-            TimeText.Text = $"{Format(position)} / {Format(_duration)}   f{frame}";
+            // Reaching the end with looping off stops playback without anyone pressing anything
+            UpdatePlayIcon();
         }
-
-        private static string Format(TimeSpan time) =>
-            time.TotalHours >= 1 ? time.ToString(@"h\:mm\:ss\.ff") : time.ToString(@"m\:ss\.ff");
 
         private void UpdatePlayIcon()
         {
-            PlayPauseIcon.Icon = _clock?.IsPaused == true ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
+            var playing = _clock != null && !_clock.IsPaused && !HasEnded();
+
+            PlayPauseIcon.Icon = playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play;
+        }
+
+        private void UpdateLoopIcon()
+        {
+            LoopIcon.Opacity = ServiceLocator.Settings?.LoopVideo == false ? 0.35 : 1.0;
+        }
+
+        private void UpdateMuteIcon()
+        {
+            MuteIcon.Icon = _muted ? FontAwesomeIcon.VolumeOff : FontAwesomeIcon.VolumeUp;
+            MuteIcon.Opacity = _muted ? 0.5 : 1.0;
+        }
+
+        /// <summary>
+        /// Flips the same setting as the viewer's loop button, then rebuilds the clock in place so
+        /// the change takes effect without losing the position.
+        /// </summary>
+        private void Loop_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (ServiceLocator.Settings == null) return;
+
+            ServiceLocator.Settings.LoopVideo = !ServiceLocator.Settings.LoopVideo;
+
+            UpdateLoopIcon();
+
+            if (_clock != null)
+            {
+                BuildClock(CurrentPosition(), _clock.IsPaused || HasEnded());
+            }
+        }
+
+        private void Mute_OnClick(object sender, RoutedEventArgs e)
+        {
+            _muted = !_muted;
+            UpdateAudio();
+        }
+
+        private void SetBottomBarShown(bool shown)
+        {
+            if (_bottomBarShown == shown) return;
+
+            _bottomBarShown = shown;
+
+            // The viewer's slide: the same distance, the same time
+            BottomBarOffset.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(shown ? 80 : 0, shown ? 0 : 80, TimeSpan.FromSeconds(0.1)));
+        }
+
+        private void BottomBar_OnMouseEnter(object sender, MouseEventArgs e)
+        {
+            _hideBottomBar.Stop();
+            SetBottomBarShown(true);
+        }
+
+        private void BottomBar_OnMouseLeave(object sender, MouseEventArgs e)
+        {
+            _hideBottomBar.Stop();
+            _hideBottomBar.Start();
+        }
+
+        /// <summary>
+        /// Reveals the bar when the pointer comes near the bottom edge, over the same distance as
+        /// the viewer.
+        /// </summary>
+        private void Window_OnPreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (_clock == null) return;
+
+            if (e.GetPosition(this).Y >= ActualHeight - PreviewWindow.BottomHoverZone)
+            {
+                SetBottomBarShown(true);
+            }
         }
 
         private void PlayPause_OnClick(object sender, RoutedEventArgs e) => TogglePlay();
@@ -533,6 +637,8 @@ namespace Diffusion.Toolkit
 
             _left.Video.IsMuted = _muted || hearB;
             _right.Video.IsMuted = _muted || !hearB;
+
+            UpdateMuteIcon();
         }
 
         private void Root_OnSizeChanged(object sender, SizeChangedEventArgs e) => UpdateWipe();
@@ -655,6 +761,7 @@ namespace Diffusion.Toolkit
         private void Window_OnClosed(object? sender, EventArgs e)
         {
             _ticker?.Stop();
+            _hideBottomBar.Stop();
 
             // Releases the files - a media element otherwise keeps them open
             StopClock();

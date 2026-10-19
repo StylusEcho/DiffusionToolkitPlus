@@ -13,6 +13,7 @@
         ShowInTaskbar="False"
         Background="Black"
         PreviewKeyDown="Window_OnPreviewKeyDown"
+        PreviewMouseMove="Window_OnPreviewMouseMove"
         Closed="Window_OnClosed">
 
     <!-- Borderless and maximised covers the whole monitor, taskbar included. Maximised in code
@@ -70,22 +71,74 @@
                    Margin="0,20,0,0" Foreground="White" Opacity="0.6" FontSize="12" IsHitTestVisible="False"
                    TextAlignment="Center"/>
 
-        <!-- Shared transport for videos. Nothing in it can take focus, so Space and the arrow keys
-             always reach the window rather than pressing a button or nudging the slider -->
-        <Border x:Name="VideoBar" VerticalAlignment="Bottom" Background="#B0000000" Padding="12,8" Visibility="Collapsed"
-                MouseLeftButtonDown="VideoBar_OnMouseLeftButtonDown">
-            <DockPanel>
-                <Button x:Name="PlayPause" DockPanel.Dock="Left" Width="32" Height="28" Focusable="False"
-                        Background="Transparent" BorderThickness="0" Click="PlayPause_OnClick">
-                    <fa:ImageAwesome x:Name="PlayPauseIcon" Icon="Pause" Width="14" Foreground="White"/>
-                </Button>
-                <TextBlock x:Name="TimeText" DockPanel.Dock="Right" Foreground="White" FontSize="12"
-                           VerticalAlignment="Center" Margin="12,0,0,0" FontFamily="Consolas"/>
-                <Slider x:Name="Scrub" Focusable="False" VerticalAlignment="Center" Margin="8,0,0,0"
-                        IsMoveToPointEnabled="True"
-                        Thumb.DragStarted="Scrub_OnDragStarted" Thumb.DragCompleted="Scrub_OnDragCompleted"
-                        ValueChanged="Scrub_OnValueChanged"/>
-            </DockPanel>
-        </Border>
+        <!-- Video control bar. The same bar as the full screen viewer's, built the same way: it
+             hides below the bottom edge and slides up when the pointer comes near or onto it.
+             Nothing in it can take focus, so Space and the arrow keys always reach the window
+             rather than pressing a button or nudging the slider -->
+        <Grid x:Name="BottomBar" Background="Transparent" IsHitTestVisible="True"
+              VerticalAlignment="Bottom" Height="72" Visibility="Collapsed"
+              MouseEnter="BottomBar_OnMouseEnter" MouseLeave="BottomBar_OnMouseLeave">
+
+            <Border x:Name="VideoBar"
+                    Background="#B0000000"
+                    CornerRadius="6"
+                    Margin="20,10,20,14"
+                    Padding="12,0"
+                    VerticalAlignment="Stretch"
+                    HorizontalAlignment="Stretch"
+                    MouseLeftButtonDown="VideoBar_OnMouseLeftButtonDown">
+                <Grid Background="{x:Null}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="40"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Play / pause -->
+                    <Button Grid.Column="0" Style="{DynamicResource BorderlessButton}"
+                            Background="Transparent" BorderThickness="0" Focusable="False"
+                            ToolTip="{lex:Loc Preview.Controls.PlayPause}"
+                            Click="PlayPause_OnClick">
+                        <fa:ImageAwesome x:Name="PlayPauseIcon" Icon="Pause" Width="18" Foreground="White"
+                                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Button>
+
+                    <!-- Loop - the same setting the viewer's button flips -->
+                    <Button Grid.Column="1" Style="{DynamicResource BorderlessButton}"
+                            Background="Transparent" BorderThickness="0" Focusable="False"
+                            ToolTip="{lex:Loc Preview.Controls.Loop}"
+                            Click="Loop_OnClick">
+                        <fa:ImageAwesome x:Name="LoopIcon" Icon="Repeat" Width="18" Foreground="White"
+                                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Button>
+
+                    <!-- Seek -->
+                    <Slider x:Name="Scrub" Grid.Column="2" VerticalAlignment="Center" Margin="10,0"
+                            Minimum="0" Focusable="False"
+                            IsMoveToPointEnabled="True"
+                            Thumb.DragStarted="Scrub_OnDragStarted"
+                            Thumb.DragCompleted="Scrub_OnDragCompleted"
+                            ValueChanged="Scrub_OnValueChanged"/>
+
+                    <TextBlock x:Name="TimeText" Grid.Column="3" VerticalAlignment="Center" Margin="4,0,10,0"
+                               Foreground="White" FontSize="13"/>
+
+                    <!-- Mute -->
+                    <Button Grid.Column="4" Style="{DynamicResource BorderlessButton}"
+                            Background="Transparent" BorderThickness="0" Focusable="False"
+                            ToolTip="{lex:Loc Preview.Controls.Mute}"
+                            Click="Mute_OnClick">
+                        <fa:ImageAwesome x:Name="MuteIcon" Icon="VolumeUp" Width="18" Foreground="White"
+                                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <Grid.RenderTransform>
+                <TranslateTransform x:Name="BottomBarOffset" Y="80"/>
+            </Grid.RenderTransform>
+        </Grid>
     </Grid>
 </Window>

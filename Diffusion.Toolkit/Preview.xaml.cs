@@ -162,9 +162,16 @@ namespace Diffusion.Toolkit
 
             if (handle == IntPtr.Zero) return;
 
-            var screen = Screen.FromHandle(handle);
+            _model.ControlBarMaxWidth = GetControlBarMaxWidth(handle);
+        }
 
-            _model.ControlBarMaxWidth = screen.Bounds.Width * 0.60;
+        /// <summary>
+        /// How wide the video control bar may grow on the monitor a window is on. Shared with the
+        /// compare view, so the two bars are the same size.
+        /// </summary>
+        internal static double GetControlBarMaxWidth(IntPtr handle)
+        {
+            return Screen.FromHandle(handle).Bounds.Width * 0.60;
         }
 
         private void PreviewPaneOnMediaOpened(object? sender, EventArgs e)
@@ -352,7 +359,11 @@ namespace Diffusion.Toolkit
             _model.CurrentImage.IsParametersVisible = false;
         }
 
-        private const int BottomHoverZone = 80;
+        /// <summary>
+        /// How close to the bottom edge the pointer has to come to reveal the control bar. Shared
+        /// with the compare view.
+        /// </summary>
+        internal const int BottomHoverZone = 80;
 
         private void InfoOverlay_OnMouseLeave(object sender, MouseEventArgs e)
         {

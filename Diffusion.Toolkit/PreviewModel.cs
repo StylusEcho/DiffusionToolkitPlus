@@ -127,7 +127,11 @@ public class PreviewModel : BaseNotify
         OnPropertyChanged(nameof(DurationText));
     }
 
-    private static string FormatTime(double seconds)
+    /// <summary>
+    /// How playback times are written in the viewer's control bar. Shared with the compare view,
+    /// so the two bars read the same.
+    /// </summary>
+    internal static string FormatTime(double seconds)
     {
         if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < 0) seconds = 0;
 
