@@ -500,6 +500,15 @@ public class MainModel : BaseNotify
     }
 
     /// <summary>
+    /// Opens the two selected files side by side in the full screen compare view.
+    /// </summary>
+    public ICommand CompareSelectedCommand
+    {
+        get;
+        set => SetField(ref field, value);
+    }
+
+    /// <summary>
     /// Opens the quick album as a view, rather than adding to it.
     /// </summary>
     public ICommand OpenQuickAlbumCommand

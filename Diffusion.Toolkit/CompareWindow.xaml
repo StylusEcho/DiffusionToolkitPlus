@@ -1,0 +1,91 @@
+<Window x:Class="Diffusion.Toolkit.CompareWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:fa="http://schemas.fontawesome.io/icons/"
+        xmlns:lex="http://wpflocalizeextension.codeplex.com"
+        lex:LocalizeDictionary.Provider="{StaticResource LocalizationProvider}"
+        lex:LocalizeDictionary.Separation="."
+        lex:LocalizeDictionary.DefaultProvider="{StaticResource LocalizationProvider}"
+        Title="{lex:Loc Compare.Title}"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="Black"
+        PreviewKeyDown="Window_OnPreviewKeyDown"
+        Closed="Window_OnClosed">
+
+    <!-- Borderless and maximised covers the whole monitor, taskbar included. Maximised in code
+         after the window is placed, so it fills the monitor the main window is on -->
+    <Grid x:Name="Root" Background="Black" ClipToBounds="True"
+          SizeChanged="Root_OnSizeChanged"
+          MouseLeftButtonDown="Root_OnMouseLeftButtonDown"
+          MouseMove="Root_OnMouseMove"
+          MouseLeftButtonUp="Root_OnMouseLeftButtonUp">
+
+        <!-- The two sides share the same bounds and the same uniform fit, so a wipe lines them up
+             pixel for pixel when they are the same size and shape -->
+        <!-- Opaque, so where the two are different shapes the wipe shows B's own letterbox
+             rather than A showing through it -->
+        <Grid x:Name="LayerA" Background="Black">
+            <Image x:Name="ImageA" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+            <MediaElement x:Name="VideoA" Stretch="Uniform" ScrubbingEnabled="True"
+                          MediaOpened="Video_OnMediaOpened" MediaFailed="Video_OnMediaFailed"/>
+        </Grid>
+
+        <Grid x:Name="LayerB" Background="Black">
+            <Image x:Name="ImageB" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+            <MediaElement x:Name="VideoB" Stretch="Uniform" ScrubbingEnabled="True"
+                          MediaOpened="Video_OnMediaOpened" MediaFailed="Video_OnMediaFailed"/>
+        </Grid>
+
+        <!-- Divider for the wipe. Drawn over both layers and invisible to the mouse, so dragging
+             anywhere moves it rather than only on the line itself -->
+        <Canvas x:Name="Overlay" IsHitTestVisible="False">
+            <Rectangle x:Name="Divider" Width="2" Fill="White" Opacity="0.85"/>
+            <Border x:Name="Handle" Width="28" Height="28" CornerRadius="14"
+                    Background="#CC000000" BorderBrush="White" BorderThickness="2">
+                <fa:ImageAwesome Icon="Exchange" Width="12" Foreground="White"/>
+            </Border>
+        </Canvas>
+
+        <!-- Labels: which side is which, and which file -->
+        <Border x:Name="LabelA" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16"
+                Background="#B0000000" CornerRadius="4" Padding="10,6" IsHitTestVisible="False">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="A" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+                <TextBlock x:Name="NameA" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="LabelB" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="16"
+                Background="#B0000000" CornerRadius="4" Padding="10,6" IsHitTestVisible="False">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="NameB" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+                <TextBlock Text="B" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource AccentBrush}" Margin="8,0,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <TextBlock x:Name="Help" Text="{lex:Loc Compare.Help}" HorizontalAlignment="Center" VerticalAlignment="Top"
+                   Margin="0,20,0,0" Foreground="White" Opacity="0.6" FontSize="12" IsHitTestVisible="False"
+                   TextAlignment="Center"/>
+
+        <!-- Shared transport for videos. Nothing in it can take focus, so Space and the arrow keys
+             always reach the window rather than pressing a button or nudging the slider -->
+        <Border x:Name="VideoBar" VerticalAlignment="Bottom" Background="#B0000000" Padding="12,8" Visibility="Collapsed"
+                MouseLeftButtonDown="VideoBar_OnMouseLeftButtonDown">
+            <DockPanel>
+                <Button x:Name="PlayPause" DockPanel.Dock="Left" Width="32" Height="28" Focusable="False"
+                        Background="Transparent" BorderThickness="0" Click="PlayPause_OnClick">
+                    <fa:ImageAwesome x:Name="PlayPauseIcon" Icon="Pause" Width="14" Foreground="White"/>
+                </Button>
+                <TextBlock x:Name="TimeText" DockPanel.Dock="Right" Foreground="White" FontSize="12"
+                           VerticalAlignment="Center" Margin="12,0,0,0" FontFamily="Consolas"/>
+                <Slider x:Name="Scrub" Focusable="False" VerticalAlignment="Center" Margin="8,0,0,0"
+                        IsMoveToPointEnabled="True"
+                        Thumb.DragStarted="Scrub_OnDragStarted" Thumb.DragCompleted="Scrub_OnDragCompleted"
+                        ValueChanged="Scrub_OnValueChanged"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

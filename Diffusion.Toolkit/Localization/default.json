@@ -484,5 +484,9 @@
   "Settings.General.RemoteControl": "Allow control from another application on this computer",
   "Settings.General.RemoteControl.ToolTip": "Listens on 127.0.0.1 so an external controller, such as a Stream Deck plugin, can rate, tag and page through the library while another window has focus. Nothing outside this computer can connect.",
   "Settings.General.RemoteControlPort": "Port",
-  "Settings.General.RemoteControlPort.ToolTip": "Port to listen on. Clients must connect to 127.0.0.1 on this port."
+  "Settings.General.RemoteControlPort.ToolTip": "Port to listen on. Clients must connect to 127.0.0.1 on this port.",
+  "Thumbnail.ContextMenu.Compare": "Compare",
+  "Compare.Title": "Compare",
+  "Compare.Help": "Drag to wipe  ·  Tab / click: toggle A/B  ·  W: wipe or toggle  ·  S: swap  ·  Space: play/pause  ·  ← →: frame step  ·  M: mute  ·  H: hide help  ·  Esc: close",
+  "Compare.LoadFailed": "could not be loaded"
 }

@@ -3,6 +3,7 @@ using Diffusion.Toolkit.Models;
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using Diffusion.Common;
@@ -231,6 +232,11 @@ namespace Diffusion.Toolkit
             _model.NextPageCommand = new RelayCommand<object>((o) => ServiceLocator.ThumbnailNavigationService.MoveNextPage());
             _model.PreviousPageCommand = new RelayCommand<object>((o) => ServiceLocator.ThumbnailNavigationService.MovePreviousPage());
 
+            // Enabled only with exactly two files selected; the menu re-queries this when it opens
+            _model.CompareSelectedCommand = new RelayCommand<object>(
+                (o) => CompareSelected(),
+                (o) => GetComparablePair() != null);
+
             _model.OpenQuickAlbumCommand = new RelayCommand<object>((o) =>
             {
                 var album = ServiceLocator.AlbumService.GetQuickAlbum();
@@ -240,6 +246,37 @@ namespace Diffusion.Toolkit
 
                 _search.OpenAlbum(album);
             });
+        }
+
+        /// <summary>
+        /// The two selected files, in selection order, when there are exactly two and both can
+        /// still be opened.
+        /// </summary>
+        private (ImageEntry A, ImageEntry B)? GetComparablePair()
+        {
+            var files = _model.SelectedImages?
+                .Where(d => d.EntryType == EntryType.File)
+                .ToList();
+
+            if (files is not { Count: 2 }) return null;
+
+            if (files.Any(d => d.Unavailable || string.IsNullOrEmpty(d.Path))) return null;
+
+            return (files[0], files[1]);
+        }
+
+        private void CompareSelected()
+        {
+            if (GetComparablePair() is not { } pair) return;
+
+            var window = new CompareWindow(
+                new CompareWindow.Side(pair.A.Path, pair.A.Type == ImageType.Video),
+                new CompareWindow.Side(pair.B.Path, pair.B.Type == ImageType.Video))
+            {
+                Owner = this
+            };
+
+            window.Show();
         }
 
         private void ShowAbout()
