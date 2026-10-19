@@ -41,6 +41,9 @@ namespace Diffusion.Toolkit
         /// </summary>
         private async Task ToggleReview()
         {
+            // Starting or resuming runs the review's search, which has to wait for the library
+            if (_model.IsLoadingLibrary) return;
+
             if (_model.IsReviewing)
             {
                 ExitReview();

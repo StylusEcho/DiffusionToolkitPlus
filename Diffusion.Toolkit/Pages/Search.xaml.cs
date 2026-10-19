@@ -642,6 +642,8 @@ namespace Diffusion.Toolkit.Pages
 
         public void Refresh()
         {
+            if (ServiceLocator.MainModel.IsLoadingLibrary) return;
+
             if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
             {
                 SearchImages(null);

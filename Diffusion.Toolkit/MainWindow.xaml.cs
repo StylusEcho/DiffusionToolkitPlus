@@ -330,6 +330,10 @@ namespace Diffusion.Toolkit
 
         private void Refresh()
         {
+            // The first search runs as soon as the library is in; one before that would read
+            // from collections that are still empty
+            if (_model.IsLoadingLibrary) return;
+
             if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
             {
                 _search.SearchImages(null);
@@ -826,6 +830,10 @@ namespace Diffusion.Toolkit
 
             _model.GotoUrl = new RelayCommand<string>((url) =>
             {
+                // Nothing to go to until the library is in. Covers the shortcut keys as well as
+                // the view bar, which is only greyed out.
+                if (_model.IsLoadingLibrary) return;
+
                 // Clicking the category you are already looking at pins the navigation pane open,
                 // which is the way out if auto-hide is making it hard to reach.
                 if (string.Equals(url, _currentNavigationUrl, StringComparison.OrdinalIgnoreCase))

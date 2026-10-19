@@ -29,6 +29,10 @@ public class MainModel : BaseNotify
         _selectedImages = new ObservableCollection<ImageEntry>();
         _queryOptions = new QueryOptions();
         _folders = new ObservableCollection<FolderViewModel>();
+
+        // Locked from the outset rather than from when the load begins: the window is up and
+        // clickable while the database is still being opened, well before that
+        IsLoadingLibrary = true;
     }
 
     public QueryOptions QueryOptions
@@ -143,13 +147,22 @@ public class MainModel : BaseNotify
 
     /// <summary>
     /// True while the library is being read at startup. The search page shows a progress overlay
-    /// and holds off searching until this clears.
+    /// and holds off searching until this clears, and navigation is locked out until it does.
     /// </summary>
     public bool IsLoadingLibrary
     {
         get;
-        set => SetField(ref field, value);
+        set
+        {
+            if (SetField(ref field, value)) OnPropertyChanged(nameof(IsViewLocked));
+        }
     }
+
+    /// <summary>
+    /// True while the controls that change which images are on screen are locked out: during a
+    /// review, and at startup until the library has loaded.
+    /// </summary>
+    public bool IsViewLocked => IsReviewing || IsLoadingLibrary;
 
     public string LibraryLoadStatus
     {
@@ -427,7 +440,10 @@ public class MainModel : BaseNotify
     public bool IsReviewing
     {
         get;
-        set => SetField(ref field, value);
+        set
+        {
+            if (SetField(ref field, value)) OnPropertyChanged(nameof(IsViewLocked));
+        }
     }
 
     /// <summary>

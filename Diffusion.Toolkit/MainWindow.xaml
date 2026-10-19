@@ -53,6 +53,7 @@
             <converters:PopoutIconConverter x:Key="PopoutIconConverter"></converters:PopoutIconConverter>
             <converters:ThumbnailViewModeConverter x:Key="ThumbnailViewModeConverter"></converters:ThumbnailViewModeConverter>
             <converters:IfLessThanConverter x:Key="IfLessThanConverter"></converters:IfLessThanConverter>
+            <converters:InvertBoolConverter x:Key="InvertBoolConverter"></converters:InvertBoolConverter>
         </ResourceDictionary>
     </Window.Resources>
     <local:BorderlessWindow.TitleContent>
@@ -410,7 +411,10 @@
                 <MenuItem Header="{lex:Loc Menu.Albums.AlbumPane}" IsChecked="{Binding ShowAlbumPanel}" Command="{Binding ToggleAlbum}" InputGestureText="Ctrl+Shift+A"/>
                 <MenuItem Header="{lex:Loc Menu.Albums.Sort}" Click="SortAlbums_OnClick"/>
             </MenuItem>-->
-            <MenuItem Header="{lex:Loc Menu.Search}">
+            <!-- Everything in here acts on the current results, and there are none until the
+                 library has loaded -->
+            <MenuItem Header="{lex:Loc Menu.Search}"
+                      IsEnabled="{Binding IsLoadingLibrary, Converter={StaticResource InvertBoolConverter}}">
                 <MenuItem Header="{lex:Loc Menu.Search.Save}" Command="{Binding SaveQuery}"/>
                 <Separator></Separator>
                 <MenuItem Command="{Binding ToggleReviewCommand}">
@@ -485,8 +489,11 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <StackPanel Orientation="Vertical" Margin="0,0,10,0">
-                        <Button Margin="0,5,0,10" Height="16" Width="24" 
+                    <!-- Greyed out until the library has loaded. The commands themselves refuse
+                         as well, which is what stops the shortcut keys -->
+                    <StackPanel Orientation="Vertical" Margin="0,0,10,0"
+                                IsEnabled="{Binding IsLoadingLibrary, Converter={StaticResource InvertBoolConverter}}">
+                        <Button Margin="0,5,0,10" Height="16" Width="24"
                                 behaviors:DTBehaviors.IsSelected="{Binding ActiveView, Converter={StaticResource StringMatchConverter}, ConverterParameter=Diffusions}"
                                 Style="{StaticResource BorderlessToolbarButton}" Command="{Binding GotoUrl}" CommandParameter="search/#images">
                             <fa:ImageAwesome ToolTip="Diffusions (Ctrl+2)" Icon="FileImageOutline" Width="16" Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" HorizontalAlignment="Center">
