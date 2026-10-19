@@ -511,6 +511,51 @@
                             </fa:ImageAwesome>
                         </Button>
                         <Separator BorderThickness="1" BorderBrush="{DynamicResource SecondaryBrush}"></Separator>
+                        <!-- Review mode sits on its own between the library views and the tools,
+                             since it locks the views above it rather than being one of them -->
+                        <Button Margin="0,5,0,10" Height="16" Width="24"
+                                Command="{Binding ToggleReviewCommand}">
+                            <!-- Style set here rather than as an attribute; the tooltip has to change
+                                 with the review state, and a Style cannot be set both ways -->
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource BorderlessToolbarButton}">
+                                    <Setter Property="ToolTip" Value="{lex:Loc Review.Buttons.Start.ToolTip}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsReviewing}" Value="True">
+                                            <Setter Property="ToolTip" Value="{lex:Loc Review.Buttons.Exit.ToolTip}"/>
+                                        </DataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsReviewing}" Value="False"/>
+                                                <Condition Binding="{Binding HasReviewSession}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="ToolTip" Value="{lex:Loc Review.Buttons.Resume.ToolTip}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <fa:ImageAwesome Icon="Tasks" Width="16" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <fa:ImageAwesome.Style>
+                                    <Style TargetType="fa:ImageAwesome">
+                                        <Setter Property="Opacity" Value="0.4"></Setter>
+                                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"></Setter>
+                                        <Style.Triggers>
+                                            <!-- Half lit while a review is only paused, so there is a
+                                                 visible difference between nothing to resume and
+                                                 something waiting -->
+                                            <DataTrigger Binding="{Binding HasReviewSession}" Value="True">
+                                                <Setter Property="Opacity" Value="0.7"></Setter>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsReviewing}" Value="True">
+                                                <Setter Property="Opacity" Value="1.0"></Setter>
+                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"></Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </fa:ImageAwesome.Style>
+                            </fa:ImageAwesome>
+                        </Button>
+                        <Separator BorderThickness="1" BorderBrush="{DynamicResource SecondaryBrush}"></Separator>
                         <Button Margin="0,5,0,10" Height="16" Width="24" 
                                 behaviors:DTBehaviors.IsSelected="{Binding ActiveView, Converter={StaticResource StringMatchConverter}, ConverterParameter=Prompts}"
                                 Style="{StaticResource BorderlessToolbarButton}" Command="{Binding GotoUrl}" CommandParameter="prompts">
@@ -542,49 +587,6 @@
                     <!-- Mode toggles. These sit at the foot of the bar, away from the view icons
                          they would otherwise be mistaken for -->
                     <StackPanel Grid.Row="1" VerticalAlignment="Bottom">
-
-                    <Button Margin="0,10,10,0" Height="16" Width="24"
-                            Command="{Binding ToggleReviewCommand}">
-                        <!-- Style set here rather than as an attribute; the tooltip has to change
-                             with the review state, and a Style cannot be set both ways -->
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource BorderlessToolbarButton}">
-                                <Setter Property="ToolTip" Value="{lex:Loc Review.Buttons.Start.ToolTip}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsReviewing}" Value="True">
-                                        <Setter Property="ToolTip" Value="{lex:Loc Review.Buttons.Exit.ToolTip}"/>
-                                    </DataTrigger>
-                                    <MultiDataTrigger>
-                                        <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding IsReviewing}" Value="False"/>
-                                            <Condition Binding="{Binding HasReviewSession}" Value="True"/>
-                                        </MultiDataTrigger.Conditions>
-                                        <Setter Property="ToolTip" Value="{lex:Loc Review.Buttons.Resume.ToolTip}"/>
-                                    </MultiDataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                        <fa:ImageAwesome Icon="Tasks" Width="16" VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <fa:ImageAwesome.Style>
-                                <Style TargetType="fa:ImageAwesome">
-                                    <Setter Property="Opacity" Value="0.4"></Setter>
-                                    <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"></Setter>
-                                    <Style.Triggers>
-                                        <!-- Half lit while a review is only paused, so there is a
-                                             visible difference between nothing to resume and
-                                             something waiting -->
-                                        <DataTrigger Binding="{Binding HasReviewSession}" Value="True">
-                                            <Setter Property="Opacity" Value="0.7"></Setter>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding IsReviewing}" Value="True">
-                                            <Setter Property="Opacity" Value="1.0"></Setter>
-                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"></Setter>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </fa:ImageAwesome.Style>
-                        </fa:ImageAwesome>
-                    </Button>
 
                     <!-- Auto-hide the navigation pane -->
                     <Button Margin="0,10,10,10" Height="16" Width="24"
