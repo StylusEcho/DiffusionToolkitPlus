@@ -266,8 +266,11 @@ namespace Diffusion.Toolkit
             if (_isTimerUpdate) return;
             if (!PreviewPane.HasPlayer) return;
 
-            // Belt and braces: ignore anything that just echoes where the player already is
-            if (Math.Abs(e.NewValue - PreviewPane.Position.TotalSeconds) < 0.75) return;
+            // Only an exact echo is skipped. This used to ignore anything within 0.75s of the
+            // player, which on a clip a few seconds long is a quarter of the bar: clicks near the
+            // playhead did nothing and dragging moved in jumps rather than through the frames.
+            // The timer's own updates never get this far anyway - they are flagged above.
+            if (Math.Abs(e.NewValue - PreviewPane.Position.TotalSeconds) < 0.001) return;
 
             PreviewPane.Position = TimeSpan.FromSeconds(e.NewValue);
 

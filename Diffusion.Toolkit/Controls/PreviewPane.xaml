@@ -68,6 +68,7 @@
                     Loaded="Player_OnLoaded"
                     MediaOpened="MediaElement_OnMediaOpened"
                     MediaEnded="Player_OnMediaEnded"
+                    ScrubbingEnabled="True"
                     MouseDown="Player_OnMouseDown"
                     SpeedRatio="1"
                     Volume="{Binding MainModel.Settings.Volume, RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type UserControl}}}"
