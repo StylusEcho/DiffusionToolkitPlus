@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Diffusion.Toolkit.Classes;
+using Diffusion.Toolkit.Configuration;
 using Diffusion.Toolkit.Models;
 using Diffusion.Toolkit.Services;
 
