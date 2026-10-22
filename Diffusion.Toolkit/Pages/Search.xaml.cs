@@ -1171,7 +1171,12 @@ namespace Diffusion.Toolkit.Pages
         {
             if (e.PropertyName == nameof(SearchModel.SelectedImageEntry))
             {
-                if (_model.SelectedImageEntry != null)
+                if (_keepPreview)
+                {
+                    // A background reload putting the selection back - the preview already shows
+                    // this image, and reloading it would restart a playing video
+                }
+                else if (_model.SelectedImageEntry != null)
                 {
                     LoadPreviewImage(_model.SelectedImageEntry.Path, _model.SelectedImageEntry);
                 }
@@ -1437,6 +1442,43 @@ namespace Diffusion.Toolkit.Pages
         }
 
         /// <summary>
+        /// Set while a background reload moves the selection without the user having asked, so
+        /// the preview is left alone. See <see cref="SetSelectedImageEntry"/>.
+        /// </summary>
+        private bool _keepPreview;
+
+        /// <summary>
+        /// Changes the selection, optionally without reloading the preview. Auto refresh reloads
+        /// the results every time a new file is picked up, and a reloaded preview restarts the
+        /// video in it from the beginning.
+        /// </summary>
+        private void SetSelectedImageEntry(ImageEntry? entry, bool keepPreview)
+        {
+            _keepPreview = keepPreview;
+
+            try
+            {
+                _model.SelectedImageEntry = entry;
+            }
+            finally
+            {
+                _keepPreview = false;
+            }
+        }
+
+        /// <summary>
+        /// True if the preview is showing this image and the file is still there to show.
+        /// </summary>
+        private bool IsInPreview(int imageId)
+        {
+            return imageId > 0
+                   && _model.CurrentImage is { } current
+                   && current.Id == imageId
+                   && !string.IsNullOrEmpty(current.Path)
+                   && File.Exists(current.Path);
+        }
+
+        /// <summary>
         /// Puts the selection back on the image the user was looking at before a reload that
         /// carried no cursor of its own - auto refresh reacting to a newly scanned image, mostly.
         /// Returns false if that image is no longer in the results, leaving the caller to decide.
@@ -1465,7 +1507,11 @@ namespace Diffusion.Toolkit.Pages
 
             if (index < 0) return false;
 
-            _model.SelectedImageEntry = _model.Images[index];
+            var restored = _model.Images[index];
+
+            // Usually a different entry object from before, since a new image shifts everything
+            // along, so the selection changes even though the image has not
+            SetSelectedImageEntry(restored, IsInPreview(imageId) && _model.CurrentImage.Path == restored.Path);
 
             // Same reason as the cursor placement above - the reloaded containers do not exist
             // until the layout pass has run
@@ -1568,7 +1614,10 @@ namespace Diffusion.Toolkit.Pages
                         }
                         else if (!TryRestoreSelection(restoreImageId, gridHadFocus))
                         {
-                            _model.SelectedImageEntry = null;
+                            // Pushed off the page by new arrivals, most likely. The selection has
+                            // nothing to point at, but the preview is left showing - and playing -
+                            // what the user was watching rather than going blank under them.
+                            SetSelectedImageEntry(null, IsInPreview(restoreImageId));
                         }
 
                     });

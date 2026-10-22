@@ -76,11 +76,6 @@ namespace Diffusion.Toolkit
 
         private bool _bottomBarShown;
 
-        /// <summary>
-        /// Hides the control bar a while after the pointer leaves it, as the viewer's does.
-        /// </summary>
-        private readonly DispatcherTimer _hideBottomBar = new() { Interval = TimeSpan.FromSeconds(2) };
-
         public CompareWindow(Side a, Side b)
         {
             InitializeComponent();
@@ -92,11 +87,6 @@ namespace Diffusion.Toolkit
             Panel.SetZIndex(_left.Layer, -2);
             Panel.SetZIndex(_right.Layer, -1);
 
-            _hideBottomBar.Tick += (_, _) =>
-            {
-                _hideBottomBar.Stop();
-                SetBottomBarShown(false);
-            };
 
             Loaded += OnLoaded;
         }
@@ -455,8 +445,7 @@ namespace Diffusion.Toolkit
 
         private void UpdateMuteIcon()
         {
-            MuteIcon.Icon = _muted ? FontAwesomeIcon.VolumeOff : FontAwesomeIcon.VolumeUp;
-            MuteIcon.Opacity = _muted ? 0.5 : 1.0;
+            MuteIcon.IsMuted = _muted;
         }
 
         /// <summary>
@@ -496,35 +485,41 @@ namespace Diffusion.Toolkit
 
         private void BottomBar_OnMouseEnter(object sender, MouseEventArgs e)
         {
-            _hideBottomBar.Stop();
             SetBottomBarShown(true);
         }
 
         private void BottomBar_OnMouseLeave(object sender, MouseEventArgs e)
         {
-            _hideBottomBar.Stop();
-            _hideBottomBar.Start();
+            // Leaving the window altogether raises no further mouse moves, so this is the last
+            // chance to put the bar away
+            UpdateBottomBar(e.GetPosition(this));
         }
 
         /// <summary>
-        /// Reveals the bar when the pointer comes near the bottom edge, over the same distance as
-        /// the viewer.
+        /// Shows the bar while the pointer is near the bottom edge and hides it the moment it is
+        /// not, over the same strip as the viewer. A drag on the seek bar keeps it up.
         /// </summary>
+        private void UpdateBottomBar(Point position)
+        {
+            SetBottomBarShown(_clock != null && (_scrubbing || PreviewWindow.IsInBottomHoverZone(this, position)));
+        }
+
         private void Window_OnPreviewMouseMove(object sender, MouseEventArgs e)
         {
-            if (_clock == null) return;
-
-            if (e.GetPosition(this).Y >= ActualHeight - PreviewWindow.BottomHoverZone)
-            {
-                SetBottomBarShown(true);
-            }
+            UpdateBottomBar(e.GetPosition(this));
         }
 
         private void PlayPause_OnClick(object sender, RoutedEventArgs e) => TogglePlay();
 
         private void Scrub_OnDragStarted(object sender, DragStartedEventArgs e) => _scrubbing = true;
 
-        private void Scrub_OnDragCompleted(object sender, DragCompletedEventArgs e) => _scrubbing = false;
+        private void Scrub_OnDragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            _scrubbing = false;
+
+            // The drag held the bar up; let go away from it and it goes
+            UpdateBottomBar(Mouse.GetPosition(this));
+        }
 
         private void Scrub_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
@@ -761,7 +756,6 @@ namespace Diffusion.Toolkit
         private void Window_OnClosed(object? sender, EventArgs e)
         {
             _ticker?.Stop();
-            _hideBottomBar.Stop();
 
             // Releases the files - a media element otherwise keeps them open
             StopClock();

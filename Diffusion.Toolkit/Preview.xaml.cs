@@ -116,11 +116,6 @@ namespace Diffusion.Toolkit
                 _model.IsTopHover = false;
             }, 2000);
 
-            _debounceCloseBottomBar = Utility.Debounce(() =>
-            {
-                _model.IsBottomHover = false;
-            }, 2000);
-
             // Utility.Debounce continues on TaskScheduler.Default, so this has to marshal back -
             // it reads the overlay's hover state and the pointer position, which are UI-thread only
             _debounceCloseInfoOverlay = Utility.Debounce(() => Dispatcher.Invoke(CloseInfoOverlayIfPointerAway), 2000);
@@ -140,7 +135,6 @@ namespace Diffusion.Toolkit
         }
 
         private Action _debounceCloseTopBar;
-        private Action _debounceCloseBottomBar;
         private Action _debounceCloseInfoOverlay;
 
         /// <summary>
@@ -262,6 +256,9 @@ namespace Diffusion.Toolkit
             _isScrubbing = false;
 
             PreviewPane.Position = TimeSpan.FromSeconds(_model.PositionSeconds);
+
+            // The drag held the bar up; let go away from it and it goes
+            UpdateBottomBar(Mouse.GetPosition(this));
         }
 
         /// <summary>
@@ -291,7 +288,9 @@ namespace Diffusion.Toolkit
 
         private void BottomBar_OnMouseLeave(object sender, MouseEventArgs e)
         {
-            _debounceCloseBottomBar();
+            // Leaving the window altogether raises no further mouse moves, so this is the last
+            // chance to put the bar away
+            UpdateBottomBar(e.GetPosition(this));
         }
 
         /// <summary>
@@ -308,10 +307,7 @@ namespace Diffusion.Toolkit
 
             var position = e.GetPosition(this);
 
-            if (PreviewPane.HasPlayer && position.Y >= ActualHeight - BottomHoverZone)
-            {
-                _model.IsBottomHover = true;
-            }
+            UpdateBottomBar(position);
 
             if (_model.CurrentImage == null) return;
 
@@ -364,6 +360,32 @@ namespace Diffusion.Toolkit
         /// with the compare view.
         /// </summary>
         internal const int BottomHoverZone = 80;
+
+        /// <summary>
+        /// True while the pointer is in the strip along the bottom that holds the control bar.
+        /// The bar itself sits inside it, so this covers being over the bar too.
+        /// </summary>
+        /// <remarks>
+        /// Bounded on every side: the pointer leaving the window across the bottom edge is
+        /// further down than the strip, not in it.
+        /// </remarks>
+        internal static bool IsInBottomHoverZone(FrameworkElement window, Point position)
+        {
+            return position.Y >= window.ActualHeight - BottomHoverZone
+                   && position.Y <= window.ActualHeight
+                   && position.X >= 0
+                   && position.X <= window.ActualWidth;
+        }
+
+        /// <summary>
+        /// Shows the control bar while the pointer is near the bottom and hides it the moment it
+        /// is not - no lingering. A drag on the seek bar keeps it up wherever the pointer wanders,
+        /// since hiding it would leave the thumb being dragged off screen.
+        /// </summary>
+        private void UpdateBottomBar(Point position)
+        {
+            _model.IsBottomHover = PreviewPane.HasPlayer && (_isScrubbing || IsInBottomHoverZone(this, position));
+        }
 
         private void InfoOverlay_OnMouseLeave(object sender, MouseEventArgs e)
         {

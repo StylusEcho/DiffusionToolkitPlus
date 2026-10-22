@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:fa="http://schemas.fontawesome.io/icons/"
+        xmlns:controls="clr-namespace:Diffusion.Toolkit.Controls"
         xmlns:lex="http://wpflocalizeextension.codeplex.com"
         lex:LocalizeDictionary.Provider="{StaticResource LocalizationProvider}"
         lex:LocalizeDictionary.Separation="."
@@ -130,8 +131,8 @@
                             Background="Transparent" BorderThickness="0" Focusable="False"
                             ToolTip="{lex:Loc Preview.Controls.Mute}"
                             Click="Mute_OnClick">
-                        <fa:ImageAwesome x:Name="MuteIcon" Icon="VolumeUp" Width="18" Foreground="White"
-                                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <controls:VolumeIcon x:Name="MuteIcon" Width="22" Height="22" Foreground="White"
+                                             VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Button>
                 </Grid>
             </Border>
