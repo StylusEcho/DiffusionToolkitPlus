@@ -30,15 +30,12 @@
         <!-- Opaque, so where the two are different shapes the wipe shows B's own letterbox
              rather than A showing through it -->
         <Grid x:Name="LayerA" Background="Black">
+            <!-- Stills and video frames alike: video is decoded here frame by frame, not played -->
             <Image x:Name="ImageA" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
-            <MediaElement x:Name="VideoA" Stretch="Uniform" ScrubbingEnabled="True"
-                          MediaOpened="Video_OnMediaOpened" MediaFailed="Video_OnMediaFailed"/>
         </Grid>
 
         <Grid x:Name="LayerB" Background="Black">
             <Image x:Name="ImageB" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
-            <MediaElement x:Name="VideoB" Stretch="Uniform" ScrubbingEnabled="True"
-                          MediaOpened="Video_OnMediaOpened" MediaFailed="Video_OnMediaFailed"/>
         </Grid>
 
         <!-- Divider for the wipe. Drawn over both layers and invisible to the mouse, so dragging

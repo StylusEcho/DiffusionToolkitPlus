@@ -10,11 +10,9 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 using Diffusion.Common;
 using Diffusion.Toolkit.Localization;
 using Diffusion.Toolkit.Services;
-using Diffusion.Video;
 using FontAwesome.WPF;
 
 namespace Diffusion.Toolkit
@@ -24,14 +22,21 @@ namespace Diffusion.Toolkit
     /// straight toggle between the two.
     /// </summary>
     /// <remarks>
-    /// Videos run on one shared clock - both media timelines are children of a single parallel
-    /// timeline - so they are frame locked by construction rather than nudged back into step,
-    /// and pausing, seeking or stepping the parent moves both.
+    /// Videos are not played, they are decoded - each on its own thread, by frame index - and
+    /// shown against one playhead. On every screen refresh the playhead says which frame each
+    /// side should be on, and the pair is shown only when both of those frames are ready. If
+    /// either side falls behind, the playhead waits for it rather than letting the other run on,
+    /// so the two are never a frame apart. A media player cannot promise that: each one runs its
+    /// own decoder on its own clock, and a shared timeline only keeps the clocks together, not
+    /// the pictures.
     ///
-    /// Different lengths are handled by holding the last frame. The parent timeline lasts as long
-    /// as the longer clip; the shorter one ends early and, with FillBehavior.HoldEnd, freezes on
-    /// its final frame until the parent finishes. Then the parent repeats and both start again
-    /// together. Every moment of the overlap is compared like for like, and neither clip drifts.
+    /// Different lengths are handled by holding the last frame. The playhead runs to the end of
+    /// the longer clip; the shorter one stays on its final frame until then. Then both start
+    /// again together. Different frame rates are lined up by time: each side shows whichever of
+    /// its frames covers the playhead's moment.
+    ///
+    /// Sound, where there is any, comes from a media player kept close to the playhead. It is
+    /// only ever heard from one side, so it does not need to be locked to the frame.
     /// </remarks>
     public partial class CompareWindow : Window
     {
@@ -43,8 +48,19 @@ namespace Diffusion.Toolkit
             public required Side Side { get; set; }
             public required Grid Layer { get; init; }
             public required Image Image { get; init; }
-            public required MediaElement Video { get; init; }
-            public TimeSpan? NaturalDuration { get; set; }
+
+            /// <summary>The decoded frames, for a video that could be opened.</summary>
+            public CompareVideoSource? Video { get; set; }
+
+            /// <summary>The sound, for a video that has any.</summary>
+            public MediaPlayer? Audio { get; set; }
+
+            public bool AudioPlaying { get; set; }
+
+            /// <summary>The frame index on screen, or -1 before the first.</summary>
+            public int Shown { get; set; } = -1;
+
+            public bool FailureReported { get; set; }
         }
 
         /// <summary>A, drawn underneath and shown on the left of the wipe.</summary>
@@ -59,10 +75,23 @@ namespace Diffusion.Toolkit
         private bool _dragging;
         private bool _muted;
 
-        private ClockGroup? _clock;
-        private List<Slot> _clockSlots = new();
-        private TimeSpan _duration;
-        private bool _durationConfirmed;
+        /// <summary>The sides with a video that is decoding, A and B in either order.</summary>
+        private List<Slot> _videoSlots = new();
+
+        /// <summary>
+        /// The playhead, in seconds. Only moved once both sides have the frames for where it
+        /// moves to.
+        /// </summary>
+        private double _position;
+
+        private bool _playing;
+
+        /// <summary>Played through to the end with looping off, and holding there.</summary>
+        private bool _ended;
+
+        private readonly System.Diagnostics.Stopwatch _stopwatch = new();
+        private TimeSpan _lastTick;
+        private bool _rendering;
 
         /// <summary>
         /// The faster of the two frame rates. Stepping by the smaller interval means neither clip
@@ -70,7 +99,6 @@ namespace Diffusion.Toolkit
         /// </summary>
         private double _frameRate = 30;
 
-        private DispatcherTimer? _ticker;
         private bool _scrubbing;
         private bool _updatingScrub;
 
@@ -80,13 +108,12 @@ namespace Diffusion.Toolkit
         {
             InitializeComponent();
 
-            _left = new Slot { Side = a, Layer = LayerA, Image = ImageA, Video = VideoA };
-            _right = new Slot { Side = b, Layer = LayerB, Image = ImageB, Video = VideoB };
+            _left = new Slot { Side = a, Layer = LayerA, Image = ImageA };
+            _right = new Slot { Side = b, Layer = LayerB, Image = ImageB };
 
             // Below the divider, labels and transport, whichever side is on top
             Panel.SetZIndex(_left.Layer, -2);
             Panel.SetZIndex(_right.Layer, -1);
-
 
             Loaded += OnLoaded;
         }
@@ -124,13 +151,8 @@ namespace Diffusion.Toolkit
         {
             foreach (var slot in new[] { _left, _right })
             {
-                if (slot.Side.IsVideo)
-                {
-                    slot.Image.Visibility = Visibility.Collapsed;
-                    continue;
-                }
-
-                slot.Video.Visibility = Visibility.Collapsed;
+                // Video frames arrive in the same image element once decoding starts
+                if (slot.Side.IsVideo) continue;
 
                 var path = slot.Side.Path;
 
@@ -172,201 +194,263 @@ namespace Diffusion.Toolkit
 
         private async Task StartVideos()
         {
-            _clockSlots = new[] { _left, _right }.Where(s => s.Side.IsVideo).ToList();
+            var slots = new[] { _left, _right }.Where(s => s.Side.IsVideo).ToList();
 
-            foreach (var slot in new[] { _left, _right }.Where(s => !s.Side.IsVideo))
+            // Opening probes the file, which can take a moment; the decoding itself then runs on
+            // each source's own thread
+            var sources = await Task.Run(() => slots.Select(s => CompareVideoSource.Open(s.Side.Path)).ToList());
+
+            if (_closed)
             {
-                slot.Video.Visibility = Visibility.Collapsed;
+                foreach (var source in sources) source?.Dispose();
+                return;
             }
 
-            // Read up front so the shared clock can be sized before anything plays. The media
-            // player's own durations arrive later and correct this if it was off
-            var paths = _clockSlots.Select(s => s.Side.Path).ToList();
-
-            var infos = await Task.Run(() => paths.Select(TryReadInfo).ToList());
-
-            _duration = infos.Select(i => i?.Duration ?? TimeSpan.Zero).DefaultIfEmpty(TimeSpan.Zero).Max();
-
-            var rates = infos.Select(i => i?.FrameRate ?? 0).Where(r => r > 0).ToList();
-
-            if (rates.Count > 0)
+            for (var i = 0; i < slots.Count; i++)
             {
-                _frameRate = rates.Max();
+                if (sources[i] == null)
+                {
+                    ReportFailure(slots[i]);
+                    continue;
+                }
+
+                slots[i].Video = sources[i];
+                _videoSlots.Add(slots[i]);
+
+                OpenAudio(slots[i]);
             }
 
-            BuildClock(TimeSpan.Zero, paused: false);
+            if (_videoSlots.Count == 0) return;
+
+            _frameRate = _videoSlots.Max(s => s.Video!.FrameRate);
 
             BottomBar.Visibility = Visibility.Visible;
 
             UpdateLoopIcon();
 
-            _ticker = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(50) };
-            _ticker.Tick += (_, _) => UpdateTransport();
-            _ticker.Start();
+            _playing = true;
+
+            _stopwatch.Start();
+            _lastTick = _stopwatch.Elapsed;
+
+            // Once per screen refresh, which is as often as a new pair of frames could be shown
+            CompositionTarget.Rendering += OnRendering;
+            _rendering = true;
 
             UpdateAudio();
         }
 
-        private static VideoInfo? TryReadInfo(string path)
-        {
-            try
-            {
-                return VideoInfoReader.Read(path);
-            }
-            catch (Exception e)
-            {
-                Logger.Log($"Compare could not read video details for {path}: {e.Message}");
-                return null;
-            }
-        }
-
         /// <summary>
-        /// (Re)creates the shared clock and hands each video its child of it.
+        /// A player for the sound only. Kept only if there is sound to play - most generated
+        /// clips are silent, and an idle player would still be decoding the picture for nothing.
         /// </summary>
-        private void BuildClock(TimeSpan position, bool paused)
+        private void OpenAudio(Slot slot)
         {
-            StopClock();
+            var player = new MediaPlayer();
 
-            // Follows the viewer's loop setting. Off, the pair plays through once and stops with
-            // both on their last frames
-            var group = new ParallelTimeline
+            player.MediaOpened += (_, _) =>
             {
-                RepeatBehavior = ServiceLocator.Settings?.LoopVideo == false
-                    ? new RepeatBehavior(1)
-                    : RepeatBehavior.Forever
+                if (_closed || !player.HasAudio)
+                {
+                    player.Close();
+                    return;
+                }
+
+                slot.Audio = player;
+                UpdateAudio();
             };
 
-            // Sized to the longer clip. Left automatic only when nothing could be read, in which
-            // case the timeline works it out from the media once they open
-            if (_duration > TimeSpan.Zero)
+            player.MediaFailed += (_, args) =>
             {
-                group.Duration = new Duration(_duration);
-            }
+                Logger.Log($"Compare could not play the sound of {slot.Side.Path}: {args.ErrorException?.Message}");
+                player.Close();
+            };
 
-            foreach (var slot in _clockSlots)
-            {
-                group.Children.Add(new MediaTimeline(new Uri(slot.Side.Path))
-                {
-                    // The shorter clip freezes on its last frame until the longer one finishes
-                    FillBehavior = FillBehavior.HoldEnd
-                });
-            }
-
-            _clock = group.CreateClock();
-
-            for (var i = 0; i < _clockSlots.Count; i++)
-            {
-                _clockSlots[i].Video.Clock = (MediaClock)_clock.Children[i];
-            }
-
-            // Shrinking the range can coerce the value, which would otherwise read as a seek
-            _updatingScrub = true;
-            Scrub.Maximum = Math.Max(_duration.TotalSeconds, 0.001);
-            _updatingScrub = false;
-
-            var controller = _clock.Controller!;
-
-            controller.Begin();
-
-            // Queued rather than aligned to the last tick: interactive calls are applied in order
-            // on the next tick, and an aligned seek would land before the Begin above took effect
-            if (position > TimeSpan.Zero)
-            {
-                controller.Seek(position, TimeSeekOrigin.BeginTime);
-            }
-
-            if (paused)
-            {
-                controller.Pause();
-            }
-
-            UpdatePlayIcon();
-            UpdateAudio();
+            player.Open(new Uri(slot.Side.Path));
         }
 
-        private void StopClock()
+        /// <summary>How long the longer clip runs, as far as is known yet.</summary>
+        private double Duration()
         {
-            if (_clock != null)
+            return _videoSlots.Count == 0 ? 0 : _videoSlots.Max(s => s.Video!.DurationSeconds);
+        }
+
+        private bool IsLooping => ServiceLocator.Settings?.LoopVideo != false;
+
+        /// <summary>
+        /// The frame one side shows at a moment: whichever of its frames covers it, or its last
+        /// once it has run out.
+        /// </summary>
+        private static int FrameAt(Slot slot, double seconds)
+        {
+            var video = slot.Video!;
+
+            var count = video.FrameCount;
+
+            if (count <= 0) return 0;
+
+            // The nudge keeps a moment that is exactly on a frame boundary, give or take
+            // floating point, on the frame that starts there rather than the one before
+            var index = (int)Math.Floor(seconds * video.FrameRate + 1e-6);
+
+            return Math.Clamp(index, 0, count - 1);
+        }
+
+        private void OnRendering(object? sender, EventArgs e)
+        {
+            var now = _stopwatch.Elapsed;
+            var elapsed = (now - _lastTick).TotalSeconds;
+
+            _lastTick = now;
+
+            var duration = Duration();
+
+            var target = _position;
+            var reachedEnd = false;
+
+            if (_playing)
             {
-                _clock.Controller?.Stop();
+                target += elapsed;
+
+                if (duration > 0 && target >= duration)
+                {
+                    if (IsLooping)
+                    {
+                        target %= duration;
+                    }
+                    else
+                    {
+                        target = duration;
+                        reachedEnd = true;
+                    }
+                }
             }
 
-            foreach (var slot in new[] { _left, _right })
+            // Moves only when both sides can show where it moves to. Otherwise the time is let
+            // go - the playhead waits for the slower decoder rather than leaving it behind
+            if (TryShow(target))
             {
-                slot.Video.Clock = null;
+                _position = target;
+
+                if (reachedEnd)
+                {
+                    _playing = false;
+                    _ended = true;
+                }
             }
 
-            _clock = null;
+            SyncAudio();
+            UpdateTransport(duration);
         }
 
         /// <summary>
-        /// The duration read up front comes from frame counts and can be a little off. Once both
-        /// clips have opened their real lengths are known, and if the longer one disagrees by more
-        /// than a frame the clock is rebuilt at the same place - otherwise the end of the longer
-        /// clip would be cut, or the hold at the end run long.
+        /// Puts both sides on their frames for a moment, together or not at all.
         /// </summary>
-        private void Video_OnMediaOpened(object sender, RoutedEventArgs e)
+        private bool TryShow(double seconds)
         {
-            var slot = _clockSlots.FirstOrDefault(s => s.Video == sender);
+            var ready = true;
+            var frames = new List<(Slot Slot, int Index, BitmapSource? Frame)>(_videoSlots.Count);
 
-            if (slot == null) return;
-
-            if (slot.Video.NaturalDuration.HasTimeSpan)
+            foreach (var slot in _videoSlots)
             {
-                slot.NaturalDuration = slot.Video.NaturalDuration.TimeSpan;
+                var video = slot.Video!;
+
+                // A side that cannot be decoded would otherwise hold the other up forever
+                if (video.Failed)
+                {
+                    if (!slot.FailureReported)
+                    {
+                        slot.FailureReported = true;
+                        ReportFailure(slot);
+                    }
+
+                    continue;
+                }
+
+                var index = FrameAt(slot, seconds);
+
+                if (index == slot.Shown)
+                {
+                    video.Want(index);
+                    continue;
+                }
+
+                var frame = video.Get(index);
+
+                if (frame == null)
+                {
+                    ready = false;
+                    continue;
+                }
+
+                frames.Add((slot, index, frame));
             }
 
-            if (_durationConfirmed || _clockSlots.Any(s => s.NaturalDuration == null)) return;
+            if (!ready) return false;
 
-            _durationConfirmed = true;
+            foreach (var (slot, index, frame) in frames)
+            {
+                slot.Image.Source = frame;
+                slot.Shown = index;
+            }
 
-            var actual = _clockSlots.Max(s => s.NaturalDuration!.Value);
-
-            var frame = TimeSpan.FromSeconds(1.0 / _frameRate);
-
-            if ((actual - _duration).Duration() <= frame) return;
-
-            var position = CurrentPosition();
-            var paused = _clock?.IsPaused == true;
-
-            _duration = actual;
-
-            BuildClock(position, paused);
+            return true;
         }
 
-        private void Video_OnMediaFailed(object? sender, ExceptionRoutedEventArgs e)
+        /// <summary>
+        /// Keeps the sound with the picture. Nudged back only when it has wandered further than
+        /// can be heard, since every correction is a small skip.
+        /// </summary>
+        private void SyncAudio()
         {
-            var slot = _clockSlots.FirstOrDefault(s => s.Video == sender);
+            const double tolerance = 0.15;
 
-            Logger.Log($"Compare could not play {slot?.Side.Path}: {e.ErrorException?.Message}");
-
-            if (slot != null)
+            foreach (var slot in _videoSlots)
             {
-                ReportFailure(slot);
+                if (slot.Audio is not { } audio) continue;
+
+                var shouldPlay = _playing && _position < slot.Video!.DurationSeconds;
+
+                if (!shouldPlay)
+                {
+                    if (slot.AudioPlaying)
+                    {
+                        audio.Pause();
+                        slot.AudioPlaying = false;
+                    }
+
+                    continue;
+                }
+
+                var at = TimeSpan.FromSeconds(_position);
+
+                if (!slot.AudioPlaying)
+                {
+                    audio.Position = at;
+                    audio.Play();
+                    slot.AudioPlaying = true;
+                }
+                else if (Math.Abs((audio.Position - at).TotalSeconds) > tolerance)
+                {
+                    audio.Position = at;
+                }
             }
         }
-
-        private TimeSpan CurrentPosition() => _clock?.CurrentTime ?? TimeSpan.Zero;
-
-        /// <summary>Played through to the end with looping off, and holding there.</summary>
-        private bool HasEnded() => _clock?.CurrentState == ClockState.Filling;
 
         private void TogglePlay()
         {
-            if (_clock?.Controller == null) return;
+            if (_videoSlots.Count == 0) return;
 
-            if (HasEnded())
+            if (_ended)
             {
                 // Played through with looping off - play again from the start, as the viewer does
-                _clock.Controller.Begin();
-            }
-            else if (_clock.IsPaused)
-            {
-                _clock.Controller.Resume();
+                _ended = false;
+                _position = 0;
+                _playing = true;
             }
             else
             {
-                _clock.Controller.Pause();
+                _playing = !_playing;
             }
 
             UpdatePlayIcon();
@@ -378,54 +462,68 @@ namespace Diffusion.Toolkit
         /// </summary>
         private void Step(int frames)
         {
-            if (_clock?.Controller == null) return;
+            if (_videoSlots.Count == 0) return;
 
-            if (!_clock.IsPaused)
+            _playing = false;
+
+            // From the start of the frame on screen, so a step lands on a frame boundary of the
+            // faster clip every time instead of carrying a fraction along
+            var current = (int)Math.Floor(_position * _frameRate + 1e-6);
+
+            SeekTo((current + frames) / _frameRate);
+        }
+
+        private void SeekTo(double seconds)
+        {
+            if (_videoSlots.Count == 0) return;
+
+            var duration = Duration();
+
+            // The start of the longer clip's last frame at the latest; the end itself would roll
+            // straight over into the next loop
+            var last = Math.Max(0, duration - 1.0 / _frameRate);
+
+            _position = Math.Clamp(seconds, 0, last);
+            _ended = false;
+
+            // Shown on the next refresh, once both frames are in. Asking now gets both decoders
+            // started on them straight away
+            foreach (var slot in _videoSlots)
             {
-                _clock.Controller.Pause();
-                UpdatePlayIcon();
+                slot.Video!.Want(FrameAt(slot, _position));
+
+                if (slot.Audio != null && slot.AudioPlaying)
+                {
+                    slot.Audio.Position = TimeSpan.FromSeconds(_position);
+                }
             }
 
-            var frame = TimeSpan.FromSeconds(1.0 / _frameRate);
-
-            var target = CurrentPosition() + TimeSpan.FromTicks(frame.Ticks * frames);
-
-            SeekTo(target);
+            UpdateTransport(duration);
         }
 
-        private void SeekTo(TimeSpan target)
+        private void UpdateTransport(double duration)
         {
-            if (_clock?.Controller == null) return;
+            if (_videoSlots.Count == 0) return;
 
-            var frame = TimeSpan.FromSeconds(1.0 / _frameRate);
+            _updatingScrub = true;
 
-            if (target < TimeSpan.Zero) target = TimeSpan.Zero;
+            // The length firms up as decoding finds where each clip really ends
+            var maximum = Math.Max(duration, 0.001);
 
-            // Short of the very end, which would roll over into the next repeat
-            if (_duration > frame && target > _duration - frame) target = _duration - frame;
-
-            // Applied immediately rather than on the next tick, so stepping with a held key reads
-            // back the position it just set rather than a stale one
-            _clock.Controller.SeekAlignedToLastTick(target, TimeSeekOrigin.BeginTime);
-
-            UpdateTransport();
-        }
-
-        private void UpdateTransport()
-        {
-            if (_clock == null) return;
-
-            var position = CurrentPosition();
+            if (Math.Abs(Scrub.Maximum - maximum) > 1e-6)
+            {
+                Scrub.Maximum = maximum;
+            }
 
             if (!_scrubbing)
             {
-                _updatingScrub = true;
-                Scrub.Value = Math.Min(position.TotalSeconds, Scrub.Maximum);
-                _updatingScrub = false;
+                Scrub.Value = Math.Min(_position, Scrub.Maximum);
             }
 
+            _updatingScrub = false;
+
             // Written the way the viewer writes it
-            TimeText.Text = $"{PreviewModel.FormatTime(position.TotalSeconds)} / {PreviewModel.FormatTime(_duration.TotalSeconds)}";
+            TimeText.Text = $"{PreviewModel.FormatTime(_position)} / {PreviewModel.FormatTime(duration)}";
 
             // Reaching the end with looping off stops playback without anyone pressing anything
             UpdatePlayIcon();
@@ -433,7 +531,7 @@ namespace Diffusion.Toolkit
 
         private void UpdatePlayIcon()
         {
-            var playing = _clock != null && !_clock.IsPaused && !HasEnded();
+            var playing = _playing && !_ended;
 
             PlayPauseIcon.Icon = playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play;
         }
@@ -449,8 +547,8 @@ namespace Diffusion.Toolkit
         }
 
         /// <summary>
-        /// Flips the same setting as the viewer's loop button, then rebuilds the clock in place so
-        /// the change takes effect without losing the position.
+        /// Flips the same setting as the viewer's loop button. Read afresh on every refresh, so it
+        /// takes effect at the next end without disturbing anything now.
         /// </summary>
         private void Loop_OnClick(object sender, RoutedEventArgs e)
         {
@@ -459,11 +557,6 @@ namespace Diffusion.Toolkit
             ServiceLocator.Settings.LoopVideo = !ServiceLocator.Settings.LoopVideo;
 
             UpdateLoopIcon();
-
-            if (_clock != null)
-            {
-                BuildClock(CurrentPosition(), _clock.IsPaused || HasEnded());
-            }
         }
 
         private void Mute_OnClick(object sender, RoutedEventArgs e)
@@ -501,7 +594,7 @@ namespace Diffusion.Toolkit
         /// </summary>
         private void UpdateBottomBar(Point position)
         {
-            SetBottomBarShown(_clock != null && (_scrubbing || PreviewWindow.IsInBottomHoverZone(this, position)));
+            SetBottomBarShown(_videoSlots.Count > 0 && (_scrubbing || PreviewWindow.IsInBottomHoverZone(this, position)));
         }
 
         private void Window_OnPreviewMouseMove(object sender, MouseEventArgs e)
@@ -525,7 +618,7 @@ namespace Diffusion.Toolkit
         {
             if (_updatingScrub) return;
 
-            SeekTo(TimeSpan.FromSeconds(e.NewValue));
+            SeekTo(e.NewValue);
         }
 
         /// <summary>Clicks on the transport bar must not also move the divider underneath it.</summary>
@@ -553,8 +646,8 @@ namespace Diffusion.Toolkit
             {
                 _right.Layer.Clip = null;
 
-                // Opacity rather than visibility, so a hidden video keeps playing in step instead
-                // of the media pipeline having anything to catch up on when it comes back
+                // Opacity rather than visibility, so the side out of view keeps its frame and
+                // comes back without a flash of nothing
                 _left.Layer.Opacity = _showingB ? 0 : 1;
                 _right.Layer.Opacity = _showingB ? 1 : 0;
 
@@ -627,11 +720,17 @@ namespace Diffusion.Toolkit
 
             var hearB = !_wipe && _showingB;
 
-            _left.Video.Volume = volume;
-            _right.Video.Volume = volume;
+            if (_left.Audio != null)
+            {
+                _left.Audio.Volume = volume;
+                _left.Audio.IsMuted = _muted || hearB;
+            }
 
-            _left.Video.IsMuted = _muted || hearB;
-            _right.Video.IsMuted = _muted || !hearB;
+            if (_right.Audio != null)
+            {
+                _right.Audio.Volume = volume;
+                _right.Audio.IsMuted = _muted || !hearB;
+            }
 
             UpdateMuteIcon();
         }
@@ -675,7 +774,7 @@ namespace Diffusion.Toolkit
 
         private void Window_OnPreviewKeyDown(object sender, KeyEventArgs e)
         {
-            var hasVideo = _clock != null;
+            var hasVideo = _videoSlots.Count > 0;
 
             switch (e.Key)
             {
@@ -734,7 +833,7 @@ namespace Diffusion.Toolkit
                     break;
 
                 case Key.Home when hasVideo:
-                    SeekTo(TimeSpan.Zero);
+                    SeekTo(0);
                     break;
 
                 case Key.M:
@@ -755,11 +854,29 @@ namespace Diffusion.Toolkit
 
         private void Window_OnClosed(object? sender, EventArgs e)
         {
-            _ticker?.Stop();
+            _closed = true;
 
-            // Releases the files - a media element otherwise keeps them open
-            StopClock();
+            if (_rendering)
+            {
+                CompositionTarget.Rendering -= OnRendering;
+                _rendering = false;
+            }
+
+            // Releases the files and the decoded frames, which for a short clip is all of them
+            foreach (var slot in new[] { _left, _right })
+            {
+                slot.Video?.Dispose();
+                slot.Video = null;
+
+                slot.Audio?.Close();
+                slot.Audio = null;
+            }
+
+            _videoSlots.Clear();
         }
+
+        /// <summary>Set once the window has gone, for loading that finishes after it.</summary>
+        private bool _closed;
 
         private static string GetLocalizedText(string key)
         {
