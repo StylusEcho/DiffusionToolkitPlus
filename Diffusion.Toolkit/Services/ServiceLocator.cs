@@ -90,6 +90,17 @@ public class ServiceLocator
 
     public static MainModel? MainModel { get; set; }
 
+    /// <summary>
+    /// The search page's own view model. Held here so that page state - which page of how many,
+    /// how many results - can be read without a reference to the page itself.
+    /// </summary>
+    public static SearchModel? SearchModel { get; set; }
+
+    public static RemoteControlService RemoteControlService
+    {
+        get { return field ??= new RemoteControlService(); }
+    }
+
     public static FolderService FolderService
     {
         get { return field ??= new FolderService(); }

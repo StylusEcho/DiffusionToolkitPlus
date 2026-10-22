@@ -15,6 +15,10 @@ namespace Diffusion.Toolkit
     {
         private async Task RescanTask(object o)
         {
+            // The root folders aren't known until the library is in, so this would report that
+            // none are configured and send the user off to Settings
+            if (_model.IsLoadingLibrary) return;
+
             if (ServiceLocator.FolderService.HasRootFolders)
             {
                 _ = Scan().ContinueWith((t) =>

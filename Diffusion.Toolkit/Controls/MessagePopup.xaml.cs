@@ -68,6 +68,22 @@ namespace Diffusion.Toolkit.Controls
             Close();
         }
 
+        /// <summary>
+        /// Answers the popup as though its affirmative button had been clicked, for a caller that
+        /// has no pointer - an external controller, say.
+        /// </summary>
+        /// <returns>False when there is nothing affirmative to click.</returns>
+        public bool Confirm()
+        {
+            var command = _model.HasYes ? _model.YesCommand : _model.HasOk ? _model.OKCommand : null;
+
+            if (command == null) return false;
+
+            command.Execute(null);
+
+            return true;
+        }
+
         public void Close()
         {
             _manager.Close(this);

@@ -243,9 +243,14 @@
                             </BlurEffect>
                         </local:Thumbnail.Effect>
                     </local:Thumbnail>
-                    <!-- Spans the whole thumbnail so badges can be pinned to individual corners -->
+                    <!-- Spans the whole thumbnail so badges can be pinned to individual corners.
+                         Sized the same way the thumbnail itself is rather than left to stretch,
+                         so the corners it measures from are the ones actually on screen -->
                     <local:ThumbnailIcons
                         Data="{Binding .}"
+                        Height="{Binding DataContext.ThumbnailSize, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                        Width="{Binding DataContext.ThumbnailSize, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                        VerticalAlignment="Top"
                         IsHitTestVisible="False"
                         ></local:ThumbnailIcons>
                     <Label Grid.Row="1" Foreground="{DynamicResource ForegroundBrush}"  HorizontalContentAlignment="Center">
@@ -554,6 +559,8 @@
                     <MenuItem Style="{StaticResource FileMenuItem}" x:Name="SelectionAlbumMenu" ItemsSource="{Binding MainModel.SelectionAlbumMenuItems}" Header="{lex:Loc Thumbnail.ContextMenu.RemoveFromAlbum}"></MenuItem>
                     <Separator Style="{StaticResource FileSeparator}"/>
                     <MenuItem Style="{StaticResource FileMenuItem}" ItemsSource="{Binding MainModel.OpenWithMenuItems}" Header="{lex:Loc Thumbnail.ContextMenu.OpenWith}"></MenuItem>
+                    <!-- Greyed out unless exactly two files are selected -->
+                    <MenuItem Style="{StaticResource FileMenuItem}" Header="{lex:Loc Thumbnail.ContextMenu.Compare}" Command="{Binding MainModel.CompareSelectedCommand}"></MenuItem>
                     <Separator Style="{StaticResource FileSeparator}"/>
                     <MenuItem Style="{StaticResource FileMenuItem}" Header="{lex:Loc Thumbnail.ContextMenu.Favorite}" ToolTip="F" InputGestureText="F" Command="{Binding FavoriteCommand}"/>
                     <MenuItem Style="{StaticResource FileMenuItem}" Header="{lex:Loc Thumbnail.ContextMenu.Rate}">

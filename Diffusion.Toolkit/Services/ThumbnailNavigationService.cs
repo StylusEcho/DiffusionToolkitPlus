@@ -25,12 +25,12 @@ public class ThumbnailNavigationService
 
     public void MovePreviousPage()
     {
-
+        PreviousPage?.Invoke(this, EventArgs.Empty);
     }
 
     public void MoveNextPage()
     {
-
+        NextPage?.Invoke(this, EventArgs.Empty);
     }
 
 }
