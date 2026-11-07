@@ -50,7 +50,7 @@ namespace Diffusion.Toolkit
             public required Image Image { get; init; }
 
             /// <summary>The decoded frames, for a video that could be opened.</summary>
-            public CompareVideoSource? Video { get; set; }
+            public VideoFrameSource? Video { get; set; }
 
             /// <summary>The sound, for a video that has any.</summary>
             public MediaPlayer? Audio { get; set; }
@@ -198,7 +198,7 @@ namespace Diffusion.Toolkit
 
             // Opening probes the file, which can take a moment; the decoding itself then runs on
             // each source's own thread
-            var sources = await Task.Run(() => slots.Select(s => CompareVideoSource.Open(s.Side.Path)).ToList());
+            var sources = await Task.Run(() => slots.Select(s => VideoFrameSource.Open(s.Side.Path)).ToList());
 
             if (_closed)
             {

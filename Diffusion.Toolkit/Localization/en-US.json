@@ -437,5 +437,6 @@
   "Thumbnail.ContextMenu.Compare": "Compare",
   "Compare.Title": "Compare",
   "Compare.Help": "Drag to wipe  ·  Tab / click: toggle A/B  ·  W: wipe or toggle  ·  S: swap  ·  Space: play/pause  ·  ← →: frame step  ·  M: mute  ·  H: hide help  ·  Esc: close",
-  "Compare.LoadFailed": "could not be loaded"
+  "Compare.LoadFailed": "could not be loaded",
+  "Preview.CannotPlay": "This video can't be played"
 }

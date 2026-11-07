@@ -61,18 +61,29 @@
                 </ScrollViewer>
             </DataTemplate>
             <DataTemplate x:Key="VideoDataTemplate" DataType="{x:Type models:ImageViewModel}">
-                <MediaElement 
-                    DataContext="{Binding Image, RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type UserControl}}}"
-                    Source="{Binding Path}"
-                    LoadedBehavior="Manual"
-                    Loaded="Player_OnLoaded"
-                    MediaOpened="MediaElement_OnMediaOpened"
-                    MediaEnded="Player_OnMediaEnded"
-                    ScrubbingEnabled="True"
-                    MouseDown="Player_OnMouseDown"
-                    SpeedRatio="1"
-                    Volume="{Binding MainModel.Settings.Volume, RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type UserControl}}}"
-                ></MediaElement>
+                <Grid Background="{x:Null}">
+                    <MediaElement
+                        DataContext="{Binding Image, RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type UserControl}}}"
+                        Source="{Binding Path}"
+                        LoadedBehavior="Manual"
+                        Loaded="Player_OnLoaded"
+                        MediaOpened="MediaElement_OnMediaOpened"
+                        MediaFailed="Player_OnMediaFailed"
+                        MediaEnded="Player_OnMediaEnded"
+                        ScrubbingEnabled="True"
+                        MouseDown="Player_OnMouseDown"
+                        SpeedRatio="1"
+                        Volume="{Binding MainModel.Settings.Volume, RelativeSource={RelativeSource  FindAncestor, AncestorType={x:Type UserControl}}}"
+                    ></MediaElement>
+
+                    <!-- Takes over from the media element for a video Windows has no decoder for:
+                         the frames are decoded by the app instead and shown here -->
+                    <Image Visibility="Collapsed"
+                           Stretch="Uniform"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           Loaded="DecodedFrame_OnLoaded"
+                           MouseDown="Player_OnMouseDown"/>
+                </Grid>
             </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>

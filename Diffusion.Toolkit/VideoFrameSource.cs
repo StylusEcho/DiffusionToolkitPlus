@@ -10,9 +10,10 @@ using Diffusion.Video;
 namespace Diffusion.Toolkit
 {
     /// <summary>
-    /// Decodes one side of a video comparison into frames that can be asked for by index, on a
-    /// thread of its own. The compare view shows a frame only once both sides have the frame
-    /// for the same moment, which is what keeps the two in step frame for frame.
+    /// Decodes a video into frames that can be asked for by index, on a thread of its own, with
+    /// OpenCV rather than Windows' media pipeline. The compare view uses it to keep two videos
+    /// in step frame for frame - it shows a pair only once both frames for the same moment are
+    /// in - and the preview falls back on it for videos Windows has no decoder for.
     /// </summary>
     /// <remarks>
     /// A clip small enough is decoded from start to finish and kept, so looping, stepping and
@@ -20,7 +21,7 @@ namespace Diffusion.Toolkit
     /// Anything larger keeps a window of frames just behind and ahead of the playhead, seeking
     /// when the playhead jumps.
     /// </remarks>
-    internal sealed class CompareVideoSource : IDisposable
+    internal sealed class VideoFrameSource : IDisposable
     {
         /// <summary>
         /// The most decoded frames one side may hold to keep a whole clip. 720p is about 2.7 MB a
@@ -64,7 +65,7 @@ namespace Diffusion.Toolkit
         /// <summary>Nothing could be decoded. A failed side is left out of the sync.</summary>
         public bool Failed => _failed;
 
-        private CompareVideoSource(string path, VideoFrameReader reader)
+        private VideoFrameSource(string path, VideoFrameReader reader)
         {
             Path = path;
             _reader = reader;
@@ -75,7 +76,7 @@ namespace Diffusion.Toolkit
             _thread = new Thread(Run)
             {
                 IsBackground = true,
-                Name = $"Compare decoder {System.IO.Path.GetFileName(path)}"
+                Name = $"Frame decoder {System.IO.Path.GetFileName(path)}"
             };
 
             // The frames are WPF bitmaps, built here and frozen before they leave this thread
@@ -83,17 +84,17 @@ namespace Diffusion.Toolkit
         }
 
         /// <summary>Opens a file and starts decoding it, or returns null if it cannot be read.</summary>
-        public static CompareVideoSource? Open(string path)
+        public static VideoFrameSource? Open(string path)
         {
             var reader = VideoFrameReader.Open(path);
 
             if (reader == null)
             {
-                Logger.Log($"Compare could not open {path} for decoding");
+                Logger.Log($"Could not open {path} for decoding");
                 return null;
             }
 
-            var source = new CompareVideoSource(path, reader);
+            var source = new VideoFrameSource(path, reader);
 
             source._thread.Start();
 
@@ -152,7 +153,7 @@ namespace Diffusion.Toolkit
             }
             catch (Exception e)
             {
-                Logger.Log($"Compare decoding {Path} failed{Environment.NewLine}{e}");
+                Logger.Log($"Decoding {Path} failed{Environment.NewLine}{e}");
 
                 lock (_lock)
                 {
@@ -353,9 +354,9 @@ namespace Diffusion.Toolkit
 
             _signal.Set();
 
-            // The reader belongs to the decoder thread and is closed there, after the frame in
-            // hand, so the file is let go of without pulling it out from under a decode
-            _thread.Join(TimeSpan.FromSeconds(2));
+            // Not waited for: this is called on the UI thread, often while stepping quickly
+            // through videos. The reader belongs to the decoder thread, which closes it and lets
+            // go of the file once the frame in hand is done.
 
             lock (_lock)
             {
