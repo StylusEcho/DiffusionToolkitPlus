@@ -20,6 +20,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 using Image = System.Drawing.Image;
 using Point = System.Windows.Point;
@@ -100,6 +101,19 @@ namespace Diffusion.Toolkit.Controls
                 var model = (ImageViewModel)e.NewValue;
                 preview.SetHandler(model);
                 preview.originalRating = model.Rating;
+
+                // The same file again - a reload that rebuilt the model - leaves the media element
+                // with nothing to open, so whatever is playing it now carries on
+                var samePath = e.OldValue is ImageViewModel { Path: { } oldPath }
+                               && string.Equals(oldPath, model?.Path, StringComparison.OrdinalIgnoreCase);
+
+                if (!samePath)
+                {
+                    // The media element is reused from one video to the next, so whatever took
+                    // over for the last one has to step aside for this one to get its own chance
+                    preview.StopDecodedPlayback(forget: true);
+                    preview.WatchForOpen(model);
+                }
 
                 //if (model.Type == ImageType.Video)
                 //{
@@ -192,6 +206,31 @@ namespace Diffusion.Toolkit.Controls
         private System.Windows.Controls.ScrollViewer? ScrollViewer = null;
         private System.Windows.Controls.MediaElement? Player = null;
 
+        /// <summary>
+        /// Plays the current video instead of the media element when Windows cannot decode it.
+        /// </summary>
+        private DecodedVideoPlayer? _decoded;
+
+        /// <summary>The image in the video template that the decoded frames are shown in.</summary>
+        private System.Windows.Controls.Image? _decodedFrame;
+
+        /// <summary>The video decoding has been started for, so it is started only once.</summary>
+        private string? _decodingPath;
+
+        /// <summary>
+        /// The video Windows could not play. Remembered across the pane being unloaded and loaded
+        /// again - leaving the page and coming back - so it goes straight back to decoding.
+        /// </summary>
+        private string? _unplayablePath;
+
+        /// <summary>
+        /// Catches a video that neither opens nor fails. Windows usually says when it cannot play
+        /// something, but not always - it can sit on a black frame for ever.
+        /// </summary>
+        private DispatcherTimer? _openWatchdog;
+
+        private static readonly TimeSpan OpenTimeout = TimeSpan.FromSeconds(5);
+
         public PreviewPane()
         {
             InitializeComponent();
@@ -206,6 +245,14 @@ namespace Diffusion.Toolkit.Controls
             {
                 ServiceLocator.MainModel.PropertyChanged += MainModelOnPropertyChanged;
             }
+
+            // A decoder left running would keep its thread, its frames and a refresh handler
+            // after the viewer has closed
+            Unloaded += (_, _) =>
+            {
+                StopOpenWatchdog();
+                StopDecodedPlayback(forget: false);
+            };
         }
 
         private void OnSizeChanged(object sender, SizeChangedEventArgs e)
@@ -627,6 +674,9 @@ namespace Diffusion.Toolkit.Controls
 
         private void ScrollViewer_OnLoaded(object sender, RoutedEventArgs e)
         {
+            StopOpenWatchdog();
+            StopDecodedPlayback(forget: true);
+
             Player = null;
 
             // A still image replaced the video, so anything driving playback controls should stop
@@ -683,7 +733,15 @@ namespace Diffusion.Toolkit.Controls
         public void Pause()
         {
             isPlaying = false;
-            Player?.Pause();
+
+            if (_decoded != null)
+            {
+                _decoded.Pause();
+            }
+            else
+            {
+                Player?.Pause();
+            }
 
             NotifyPlaybackStateChanged();
         }
@@ -696,7 +754,7 @@ namespace Diffusion.Toolkit.Controls
         /// <summary>
         /// True while a video is loaded. Still images don't create a player.
         /// </summary>
-        public bool HasPlayer => Player != null;
+        public bool HasPlayer => Player != null || _decoded != null;
 
         public bool IsPlaying => isPlaying;
 
@@ -760,9 +818,16 @@ namespace Diffusion.Toolkit.Controls
 
         public TimeSpan Position
         {
-            get => Player?.Position ?? TimeSpan.Zero;
+            get => _decoded?.Position ?? Player?.Position ?? TimeSpan.Zero;
             set
             {
+                if (_decoded != null)
+                {
+                    _decoded.Position = value;
+                    isEnded = false;
+                    return;
+                }
+
                 if (Player == null) return;
 
                 Player.Position = value;
@@ -770,9 +835,11 @@ namespace Diffusion.Toolkit.Controls
             }
         }
 
-        public TimeSpan Duration => Player is { NaturalDuration.HasTimeSpan: true }
-            ? Player.NaturalDuration.TimeSpan
-            : TimeSpan.Zero;
+        public TimeSpan Duration => _decoded != null
+            ? _decoded.Duration
+            : Player is { NaturalDuration.HasTimeSpan: true }
+                ? Player.NaturalDuration.TimeSpan
+                : TimeSpan.Zero;
 
         /// <summary>
         /// In the docked pane this follows the "mute side panel video" setting, so browsing the
@@ -805,6 +872,25 @@ namespace Diffusion.Toolkit.Controls
 
         public void TogglePlayPause()
         {
+            if (_decoded != null)
+            {
+                if (_decoded.IsPlaying)
+                {
+                    _decoded.Pause();
+                }
+                else
+                {
+                    // Starts again from the beginning if it had played through
+                    _decoded.Play();
+                    isEnded = false;
+                }
+
+                isPlaying = _decoded.IsPlaying;
+
+                NotifyPlaybackStateChanged();
+                return;
+            }
+
             if (Player == null) return;
 
             if (isPlaying)
@@ -835,6 +921,24 @@ namespace Diffusion.Toolkit.Controls
 
         private void MediaElement_OnMediaOpened(object sender, RoutedEventArgs e)
         {
+            StopOpenWatchdog();
+
+            // Opened late, after the watchdog had already handed over to the decoder
+            if (_decoded != null || _decodingPath != null)
+            {
+                Player?.Stop();
+                return;
+            }
+
+            // Opened, but with no picture: the container was readable and the video in it was
+            // not, which is what a missing codec looks like when the file also has sound
+            if (Image is { Type: ImageType.Video } && Player is { HasVideo: false })
+            {
+                Logger.Log($"Windows opened {Image.Path} but could not decode its video; decoding it directly instead");
+                StartDecodedPlayback();
+                return;
+            }
+
             if (Image.Type == ImageType.Video)
             {
                 ApplyMuteState();
@@ -864,6 +968,186 @@ namespace Diffusion.Toolkit.Controls
                 OnPropertyChanged(nameof(IsMuted));
 
                 MediaOpened?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void Player_OnMediaFailed(object? sender, ExceptionRoutedEventArgs e)
+        {
+            StopOpenWatchdog();
+
+            // Usually a missing codec - HEVC without the extension from the Store, AV1, 10-bit
+            // or 4:4:4 H.264 - which Windows reports by refusing the file outright. This used to
+            // go unhandled, leaving the pane black and the viewer with no controls at all.
+            Logger.Log($"Windows could not play {Image?.Path}: {e.ErrorException?.Message}; decoding it directly instead");
+
+            StartDecodedPlayback();
+        }
+
+        private void DecodedFrame_OnLoaded(object sender, RoutedEventArgs e)
+        {
+            _decodedFrame = (System.Windows.Controls.Image)sender;
+
+            // Back on a page whose video was already found unplayable: no need to wait for
+            // Windows to fail at it a second time
+            if (_unplayablePath != null && string.Equals(_unplayablePath, Image?.Path, StringComparison.OrdinalIgnoreCase))
+            {
+                StartDecodedPlayback();
+            }
+        }
+
+        private void WatchForOpen(ImageViewModel? model)
+        {
+            StopOpenWatchdog();
+
+            if (model is not { Type: ImageType.Video }) return;
+
+            _openWatchdog = new DispatcherTimer { Interval = OpenTimeout };
+
+            _openWatchdog.Tick += (_, _) =>
+            {
+                StopOpenWatchdog();
+
+                // Only for the video it was started for, and only if anyone can see the pane -
+                // a hidden pane never gets its media element going in the first place
+                if (!ReferenceEquals(Image, model) || !IsVisible || Player == null) return;
+
+                // Opened after all, with the event already gone by
+                if (Player.HasVideo || Player.NaturalDuration.HasTimeSpan) return;
+
+                Logger.Log($"Windows did not open {model.Path} within {OpenTimeout.TotalSeconds:0}s; decoding it directly instead");
+
+                StartDecodedPlayback();
+            };
+
+            _openWatchdog.Start();
+        }
+
+        private void StopOpenWatchdog()
+        {
+            _openWatchdog?.Stop();
+            _openWatchdog = null;
+        }
+
+        /// <summary>
+        /// Plays the current video from frames decoded by the app, in place of the media element.
+        /// </summary>
+        private async void StartDecodedPlayback()
+        {
+            var model = Image;
+            var path = model?.Path;
+
+            if (model is not { Type: ImageType.Video } || string.IsNullOrEmpty(path)) return;
+
+            // The media element can report the same file more than once
+            if (string.Equals(_decodingPath, path, StringComparison.OrdinalIgnoreCase)) return;
+
+            StopDecodedPlayback(forget: true);
+
+            _decodingPath = path;
+            _unplayablePath = path;
+
+            try
+            {
+                // Nothing to play there; stopping it keeps it from trying again
+                Player?.Stop();
+            }
+            catch (Exception)
+            {
+                // A media element that failed to open can object to being stopped
+            }
+
+            // Opening probes the file, which takes a moment
+            var source = await Task.Run(() => VideoFrameSource.Open(path));
+
+            // Moved on to something else while that was happening
+            if (!string.Equals(_decodingPath, path, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(Image?.Path, path, StringComparison.OrdinalIgnoreCase))
+            {
+                source?.Dispose();
+                return;
+            }
+
+            if (source == null || _decodedFrame == null)
+            {
+                source?.Dispose();
+                _decodingPath = null;
+
+                var current = Image ?? model;
+
+                current.Message = GetLocalizedText("Preview.CannotPlay");
+                current.IsMessageVisible = true;
+
+                return;
+            }
+
+            _decoded = new DecodedVideoPlayer(source, _decodedFrame);
+
+            _decoded.Ended += (_, _) =>
+            {
+                isEnded = true;
+                isPlaying = false;
+
+                NotifyPlaybackStateChanged();
+            };
+
+            if (Player != null)
+            {
+                Player.Visibility = Visibility.Collapsed;
+            }
+
+            _decodedFrame.Visibility = Visibility.Visible;
+
+            // Starts the way a video Windows can play does: playing, unless this is the docked
+            // pane while the viewer is open, where it shows the first frame and waits
+            var autoPlay = IsPopout || !MainModel.IsPreviewOpen;
+
+            isEnded = false;
+            isPlaying = autoPlay;
+
+            if (autoPlay)
+            {
+                _decoded.Play();
+            }
+
+            NotifyPlaybackStateChanged();
+
+            // The viewer builds its control bar on this, the same as for any other video
+            MediaOpened?.Invoke(this, EventArgs.Empty);
+        }
+
+        private static string GetLocalizedText(string key)
+        {
+            return global::Diffusion.Toolkit.Localization.JsonLocalizationProvider.Instance.GetLocalizedObject(key, null, System.Globalization.CultureInfo.InvariantCulture) as string ?? key;
+        }
+
+        /// <summary>
+        /// Hands the pane back to the media element. <paramref name="forget"/> also drops the
+        /// note that the current video is unplayable - wanted when moving to another video, not
+        /// when the pane is only being unloaded for a while.
+        /// </summary>
+        private void StopDecodedPlayback(bool forget)
+        {
+            _decodingPath = null;
+
+            if (forget)
+            {
+                _unplayablePath = null;
+            }
+
+            if (_decoded != null)
+            {
+                _decoded.Dispose();
+                _decoded = null;
+            }
+
+            if (_decodedFrame != null)
+            {
+                _decodedFrame.Visibility = Visibility.Collapsed;
+            }
+
+            if (Player != null)
+            {
+                Player.Visibility = Visibility.Visible;
             }
         }
     }

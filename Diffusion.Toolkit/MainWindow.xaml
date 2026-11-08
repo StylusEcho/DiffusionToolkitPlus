@@ -53,6 +53,7 @@
             <converters:PopoutIconConverter x:Key="PopoutIconConverter"></converters:PopoutIconConverter>
             <converters:ThumbnailViewModeConverter x:Key="ThumbnailViewModeConverter"></converters:ThumbnailViewModeConverter>
             <converters:IfLessThanConverter x:Key="IfLessThanConverter"></converters:IfLessThanConverter>
+            <converters:InvertBoolConverter x:Key="InvertBoolConverter"></converters:InvertBoolConverter>
         </ResourceDictionary>
     </Window.Resources>
     <local:BorderlessWindow.TitleContent>
@@ -410,8 +411,33 @@
                 <MenuItem Header="{lex:Loc Menu.Albums.AlbumPane}" IsChecked="{Binding ShowAlbumPanel}" Command="{Binding ToggleAlbum}" InputGestureText="Ctrl+Shift+A"/>
                 <MenuItem Header="{lex:Loc Menu.Albums.Sort}" Click="SortAlbums_OnClick"/>
             </MenuItem>-->
-            <MenuItem Header="{lex:Loc Menu.Search}">
+            <!-- Everything in here acts on the current results, and there are none until the
+                 library has loaded -->
+            <MenuItem Header="{lex:Loc Menu.Search}"
+                      IsEnabled="{Binding IsLoadingLibrary, Converter={StaticResource InvertBoolConverter}}">
                 <MenuItem Header="{lex:Loc Menu.Search.Save}" Command="{Binding SaveQuery}"/>
+                <Separator></Separator>
+                <MenuItem Command="{Binding ToggleReviewCommand}">
+                    <MenuItem.Style>
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                            <Setter Property="Header" Value="{lex:Loc Menu.Search.StartReview}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsReviewing}" Value="True">
+                                    <Setter Property="Header" Value="{lex:Loc Menu.Search.ExitReview}"/>
+                                </DataTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsReviewing}" Value="False"/>
+                                        <Condition Binding="{Binding HasReviewSession}" Value="True"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Header" Value="{lex:Loc Menu.Search.ResumeReview}"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </MenuItem.Style>
+                </MenuItem>
+                <MenuItem Header="{lex:Loc Menu.Search.DiscardReview}" Command="{Binding DiscardReviewCommand}"
+                          IsEnabled="{Binding HasReviewSession}"/>
                 <Separator></Separator>
                 <MenuItem Header="{lex:Loc Menu.Search.AutoTagNSFW}" Command="{Binding AutoTagNSFW}"/>
                 <MenuItem Header="{lex:Loc Menu.Search.AddAllToAlbum}" Command="{Binding AddAllToAlbum}"/>
@@ -463,17 +489,20 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <StackPanel Orientation="Vertical" Margin="0,0,10,0">
+                    <!-- Greyed out until the library has loaded. The commands themselves refuse
+                         as well, which is what stops the shortcut keys -->
+                    <StackPanel Orientation="Vertical" Margin="0,0,10,0"
+                                IsEnabled="{Binding IsLoadingLibrary, Converter={StaticResource InvertBoolConverter}}">
+                        <Button Margin="0,5,0,10" Height="16" Width="24"
+                                behaviors:DTBehaviors.IsSelected="{Binding ActiveView, Converter={StaticResource StringMatchConverter}, ConverterParameter=Diffusions}"
+                                Style="{StaticResource BorderlessToolbarButton}" Command="{Binding GotoUrl}" CommandParameter="search/#images">
+                            <fa:ImageAwesome ToolTip="Diffusions (Ctrl+2)" Icon="FileImageOutline" Width="16" Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            </fa:ImageAwesome>
+                        </Button>
                         <Button Margin="0,5,0,10" Height="16" Width="24" 
                                 behaviors:DTBehaviors.IsSelected="{Binding ActiveView, Converter={StaticResource StringMatchConverter}, ConverterParameter=Folders}"
                                 Style="{StaticResource BorderlessToolbarButton}" Command="{Binding GotoUrl}" CommandParameter="search/#folders">
                             <fa:ImageAwesome ToolTip="Folders (Ctrl+1)" Icon="FolderOutlinepenOutline" Width="16" Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" HorizontalAlignment="Center">
-                            </fa:ImageAwesome>
-                        </Button>
-                        <Button Margin="0,5,0,10" Height="16" Width="24" 
-                                behaviors:DTBehaviors.IsSelected="{Binding ActiveView, Converter={StaticResource StringMatchConverter}, ConverterParameter=Diffusions}"
-                                Style="{StaticResource BorderlessToolbarButton}" Command="{Binding GotoUrl}" CommandParameter="search/#images">
-                            <fa:ImageAwesome ToolTip="Search (Ctrl+2)" Icon="Search" Width="16" Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" HorizontalAlignment="Center">
                             </fa:ImageAwesome>
                         </Button>
                         <Button Margin="0,5,0,10" Height="16" Width="24" 
@@ -486,6 +515,51 @@
                                 behaviors:DTBehaviors.IsSelected="{Binding ActiveView, Converter={StaticResource StringMatchConverter}, ConverterParameter=For Deletion}"
                                 Style="{StaticResource BorderlessToolbarButton}" Command="{Binding GotoUrl}" CommandParameter="search/#deleted">
                             <fa:ImageAwesome ToolTip="For Deletion (Ctrl+4)" Icon="TrashOutline" Width="16" Foreground="{DynamicResource ForegroundBrush}" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            </fa:ImageAwesome>
+                        </Button>
+                        <Separator BorderThickness="1" BorderBrush="{DynamicResource SecondaryBrush}"></Separator>
+                        <!-- Review mode sits on its own between the library views and the tools,
+                             since it locks the views above it rather than being one of them -->
+                        <Button Margin="0,5,0,10" Height="16" Width="24"
+                                Command="{Binding ToggleReviewCommand}">
+                            <!-- Style set here rather than as an attribute; the tooltip has to change
+                                 with the review state, and a Style cannot be set both ways -->
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource BorderlessToolbarButton}">
+                                    <Setter Property="ToolTip" Value="{lex:Loc Review.Buttons.Start.ToolTip}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsReviewing}" Value="True">
+                                            <Setter Property="ToolTip" Value="{lex:Loc Review.Buttons.Exit.ToolTip}"/>
+                                        </DataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsReviewing}" Value="False"/>
+                                                <Condition Binding="{Binding HasReviewSession}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="ToolTip" Value="{lex:Loc Review.Buttons.Resume.ToolTip}"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <fa:ImageAwesome Icon="Tasks" Width="16" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <fa:ImageAwesome.Style>
+                                    <Style TargetType="fa:ImageAwesome">
+                                        <Setter Property="Opacity" Value="0.4"></Setter>
+                                        <Setter Property="Foreground" Value="{DynamicResource ForegroundBrush}"></Setter>
+                                        <Style.Triggers>
+                                            <!-- Half lit while a review is only paused, so there is a
+                                                 visible difference between nothing to resume and
+                                                 something waiting -->
+                                            <DataTrigger Binding="{Binding HasReviewSession}" Value="True">
+                                                <Setter Property="Opacity" Value="0.7"></Setter>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsReviewing}" Value="True">
+                                                <Setter Property="Opacity" Value="1.0"></Setter>
+                                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"></Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </fa:ImageAwesome.Style>
                             </fa:ImageAwesome>
                         </Button>
                         <Separator BorderThickness="1" BorderBrush="{DynamicResource SecondaryBrush}"></Separator>
@@ -517,9 +591,12 @@
                         </Button>
                     </StackPanel>
 
-                    <!-- Auto-hide the navigation pane. Sits at the foot of the bar, away from the
-                         view icons it would otherwise be mistaken for -->
-                    <Button Grid.Row="1" VerticalAlignment="Bottom" Margin="0,10,10,10" Height="16" Width="24"
+                    <!-- Mode toggles. These sit at the foot of the bar, away from the view icons
+                         they would otherwise be mistaken for -->
+                    <StackPanel Grid.Row="1" VerticalAlignment="Bottom">
+
+                    <!-- Auto-hide the navigation pane -->
+                    <Button Margin="0,10,10,10" Height="16" Width="24"
                             Style="{StaticResource BorderlessToolbarButton}"
                             Command="{Binding ToggleNavigationAutoHideCommand}">
                         <fa:ImageAwesome Icon="Columns" Width="16" VerticalAlignment="Center" HorizontalAlignment="Center"
@@ -538,6 +615,8 @@
                             </fa:ImageAwesome.Style>
                         </fa:ImageAwesome>
                     </Button>
+
+                    </StackPanel>
                 </Grid>
                 <Frame x:Name="Frame" Content="{Binding Page}" NavigationUIVisibility="Hidden"></Frame>
             </DockPanel>

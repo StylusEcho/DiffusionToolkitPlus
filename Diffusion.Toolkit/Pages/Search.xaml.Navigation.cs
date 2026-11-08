@@ -70,12 +70,25 @@ namespace Diffusion.Toolkit.Pages
 
                     var paged = ThumbnailListView.GoNextPage(() =>
                     {
-                        _model.SelectedImageEntry = _model.Images[0];
-                        ThumbnailListView.ThumbnailListView.SelectedItem = _model.SelectedImageEntry;
-                        NavigationCompleted?.Invoke(this, new EventArgs());
+                        // Released whatever happens in here. This also runs after a reload that
+                        // failed, when the page may be empty, and anything throwing before the
+                        // release used to leave navigation switched off for the rest of the session
+                        try
+                        {
+                            _startIndex = 0;
 
-                        _startIndex = 0;
-                        isPaging = false;
+                            if (_model.Images is { Count: > 0 } && !_model.Images[0].IsEmpty)
+                            {
+                                _model.SelectedImageEntry = _model.Images[0];
+                                ThumbnailListView.ThumbnailListView.SelectedItem = _model.SelectedImageEntry;
+                            }
+
+                            NavigationCompleted?.Invoke(this, new EventArgs());
+                        }
+                        finally
+                        {
+                            isPaging = false;
+                        }
                     });
 
                     if (!paged)
@@ -111,21 +124,36 @@ namespace Diffusion.Toolkit.Pages
                     isPaging = true;
                     var paged = ThumbnailListView.GoPrevPage(() =>
                     {
-                        var empty = _model.Images.FirstOrDefault(d => d.IsEmpty);
-                        var lastIndex = _model.Images.Count - 1;
-                        if (empty != null)
+                        // Released whatever happens in here - see the note in NavigateCursorNext
+                        try
                         {
-                            lastIndex = _model.Images.IndexOf(empty) - 1;
+                            var images = _model.Images;
+
+                            if (images is { Count: > 0 })
+                            {
+                                var empty = images.FirstOrDefault(d => d.IsEmpty);
+                                var lastIndex = images.Count - 1;
+                                if (empty != null)
+                                {
+                                    lastIndex = images.IndexOf(empty) - 1;
+                                }
+
+                                // A page that is all padding has no last image to land on
+                                if (lastIndex >= 0)
+                                {
+                                    _startIndex = lastIndex;
+
+                                    _model.SelectedImageEntry = images[lastIndex];
+                                    ThumbnailListView.ThumbnailListView.SelectedItem = _model.SelectedImageEntry;
+                                }
+                            }
+
+                            NavigationCompleted?.Invoke(this, new EventArgs());
                         }
-
-                        _startIndex = lastIndex;
-
-                        _model.SelectedImageEntry = _model.Images[lastIndex];
-                        ThumbnailListView.ThumbnailListView.SelectedItem = _model.SelectedImageEntry;
-                        NavigationCompleted?.Invoke(this, new EventArgs());
-
-                        isPaging = false;
-
+                        finally
+                        {
+                            isPaging = false;
+                        }
                     }, true);
 
                     if (!paged)

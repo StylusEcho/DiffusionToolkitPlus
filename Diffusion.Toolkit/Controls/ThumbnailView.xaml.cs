@@ -352,7 +352,23 @@ namespace Diffusion.Toolkit.Controls
                     {
                         ThumbnailListView.ScrollIntoView(item);
                         item.BringIntoView();
-                        item.Focus();
+
+                        // Taking keyboard focus in a window that is not active activates it. With
+                        // the full screen viewer open that is the main window, behind it: the viewer
+                        // is owned by it, so it stays drawn on top and nothing looks different, but
+                        // every key from then on goes to the grid underneath. A page turn from the
+                        // viewer ends here, which is how its navigation kept going dead.
+                        //
+                        // Logical focus instead: the window restores it as keyboard focus when it
+                        // is next activated, so closing the viewer still lands on this thumbnail.
+                        if (Window.GetWindow(item) is { IsActive: false })
+                        {
+                            FocusManager.SetFocusedElement(FocusManager.GetFocusScope(item), item);
+                        }
+                        else
+                        {
+                            item.Focus();
+                        }
                     }
                 }
             }
@@ -548,7 +564,7 @@ namespace Diffusion.Toolkit.Controls
             return markable;
         }
 
-        private void RateSelected(int rating)
+        public void RateSelected(int rating)
         {
             var imageEntries = GetMarkableSelection();
 
@@ -581,7 +597,7 @@ namespace Diffusion.Toolkit.Controls
             }
         }
 
-        private void UnrateSelected()
+        public void UnrateSelected()
         {
             var imageEntries = GetMarkableSelection();
 
@@ -608,7 +624,7 @@ namespace Diffusion.Toolkit.Controls
             }
         }
 
-        private void FavoriteSelected()
+        public void FavoriteSelected()
         {
             var imageEntries = GetMarkableSelection();
 
@@ -634,7 +650,7 @@ namespace Diffusion.Toolkit.Controls
             }
         }
 
-        private void NSFWSelected()
+        public void NSFWSelected()
         {
             var imageEntries = GetMarkableSelection();
 
@@ -757,7 +773,7 @@ namespace Diffusion.Toolkit.Controls
         }
 
 
-        private void DeleteSelected()
+        public void DeleteSelected()
         {
             var imageEntries = GetMarkableSelection();
 

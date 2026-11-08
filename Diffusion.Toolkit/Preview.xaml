@@ -363,19 +363,9 @@
                                 Background="Transparent" BorderThickness="0"
                                 ToolTip="{lex:Loc Preview.Controls.Mute}"
                                 Command="{Binding ToggleMuteCommand}">
-                            <fa:ImageAwesome Width="18" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <fa:ImageAwesome.Style>
-                                    <Style TargetType="fa:ImageAwesome">
-                                        <Setter Property="Icon" Value="VolumeUp"></Setter>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsMuted}" Value="{StaticResource TrueValue}">
-                                                <Setter Property="Icon" Value="VolumeOff"></Setter>
-                                                <Setter Property="Opacity" Value="0.5"></Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </fa:ImageAwesome.Style>
-                            </fa:ImageAwesome>
+                            <controls:VolumeIcon Width="22" Height="22" Foreground="White"
+                                                 VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                 IsMuted="{Binding IsMuted}"/>
                         </Button>
                     </Grid>
                 </Border>

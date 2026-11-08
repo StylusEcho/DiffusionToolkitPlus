@@ -48,4 +48,14 @@ public class MessageService
     {
         handle.Close();
     }
+
+    /// <summary>
+    /// True while a popup is waiting to be answered.
+    /// </summary>
+    public bool HasPopup => _messagePopupManager.HasPopup;
+
+    /// <summary>
+    /// Answers the popup on top as though its affirmative button had been clicked.
+    /// </summary>
+    public bool Confirm() => _messagePopupManager.Confirm();
 }
